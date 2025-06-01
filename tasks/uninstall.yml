@@ -4,27 +4,27 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Check existence of AnonymousOverflow systemd service
+- name: Check existence of ReactFlux systemd service
   ansible.builtin.stat:
     path: "{{ devture_systemd_docker_base_systemd_path }}/{{ reactflux_identifier }}.service"
   register: reactflux_service_stat
 
-- name: Uninstall AnonymousOverflow systemd services and files
+- name: Uninstall ReactFlux systemd services and files
   when: reactflux_service_stat.stat.exists | bool
   block:
-    - name: Ensure AnonymousOverflow systemd service is stopped
+    - name: Ensure ReactFlux systemd service is stopped
       ansible.builtin.service:
         name: "{{ reactflux_identifier }}"
         state: stopped
         enabled: false
         daemon_reload: true
 
-    - name: Ensure AnonymousOverflow systemd service does not exist
+    - name: Ensure ReactFlux systemd service does not exist
       ansible.builtin.file:
         path: "{{ devture_systemd_docker_base_systemd_path }}/{{ reactflux_identifier }}.service"
         state: absent
 
-    - name: Ensure AnonymousOverflow path does not exist
+    - name: Ensure ReactFlux path does not exist
       ansible.builtin.file:
         path: "{{ reactflux_base_path }}"
         state: absent

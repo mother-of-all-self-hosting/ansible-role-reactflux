@@ -4,25 +4,25 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Perform AnonymousOverflow installation tasks
+- name: Perform ReactFlux installation tasks
   tags:
     - setup-all
     - setup-reactflux
     - install-all
     - install-reactflux
   block:
-    - name: Validate AnonymousOverflow configuration
+    - name: Validate ReactFlux configuration
       when: reactflux_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
-    - name: Install AnonymousOverflow
+    - name: Install ReactFlux
       when: reactflux_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
 
-- name: Perform AnonymousOverflow uninstallation tasks
+- name: Perform ReactFlux uninstallation tasks
   tags:
     - setup-all
     - setup-reactflux
   block:
-    - name: Uninstall AnonymousOverflow
+    - name: Uninstall ReactFlux
       when: not reactflux_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"

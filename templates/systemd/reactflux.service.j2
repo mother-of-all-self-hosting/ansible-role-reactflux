@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 #}
 
 [Unit]
-Description=AnonymousOverflow ({{ reactflux_identifier }})
+Description=ReactFlux ({{ reactflux_identifier }})
 {% for service in reactflux_systemd_required_services_list %}
 Requires={{ service }}
 After={{ service }}

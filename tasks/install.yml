@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Ensure AnonymousOverflow path exists
+- name: Ensure ReactFlux path exists
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -14,7 +14,7 @@
   with_items:
     - "{{ reactflux_base_path }}"
 
-- name: Ensure AnonymousOverflow support files installed
+- name: Ensure ReactFlux support files installed
   ansible.builtin.template:
     src: "{{ role_path }}/templates/{{ item }}.j2"
     dest: "{{ reactflux_base_path }}/{{ item }}"
@@ -25,7 +25,7 @@
     - env
     - labels
 
-- name: Ensure AnonymousOverflow container image is pulled
+- name: Ensure ReactFlux container image is pulled
   community.docker.docker_image:
     name: "{{ reactflux_container_image }}"
     source: "{{ 'pull' if ansible_version.major > 2 or ansible_version.minor > 7 else omit }}"
@@ -36,14 +36,14 @@
   delay: "{{ devture_playbook_help_container_retries_delay }}"
   until: result is not failed
 
-- name: Ensure AnonymousOverflow container network is created
+- name: Ensure ReactFlux container network is created
   community.general.docker_network:
     enable_ipv6: "{{ devture_systemd_docker_base_ipv6_enabled }}"
     name: "{{ reactflux_container_network }}"
     driver: bridge
     driver_options: "{{ devture_systemd_docker_base_container_networks_driver_options }}"
 
-- name: Ensure AnonymousOverflow systemd service is present
+- name: Ensure ReactFlux systemd service is present
   ansible.builtin.template:
     src: "{{ role_path }}/templates/systemd/reactflux.service.j2"
     dest: "{{ devture_systemd_docker_base_systemd_path }}/{{ reactflux_identifier }}.service"

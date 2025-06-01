@@ -5,9 +5,9 @@ SPDX-FileCopyrightText: 2025 Suguru Hirahara
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# AnonymousOverflow Ansible role
+# ReactFlux Ansible role
 
-This is an [Ansible](https://www.ansible.com/) role which installs [AnonymousOverflow](https://github.com/httpjamesm/AnonymousOverflow) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
+This is an [Ansible](https://www.ansible.com/) role which installs [ReactFlux](https://github.com/httpjamesm/ReactFlux) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
 
 This role *implicitly* depends on:
 

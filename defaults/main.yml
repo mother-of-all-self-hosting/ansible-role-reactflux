@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-# Project source code URL: https://github.com/httpjamesm/AnonymousOverflow
+# Project source code URL: https://github.com/httpjamesm/ReactFlux
 
 reactflux_enabled: true
 
@@ -23,17 +23,17 @@ reactflux_gid: ''
 # Specify URI scheme for reactflux_base_url.
 reactflux_scheme: https
 
-# The hostname at which AnonymousOverflow is served.
+# The hostname at which ReactFlux is served.
 reactflux_hostname: ''
 
-# The path at which AnonymousOverflow is exposed.
+# The path at which ReactFlux is exposed.
 # This value must either be `/` or not end with a slash (e.g. `/reactflux`).
 #
-# Hosting AnonymousOverflow under a subpath does not seem to be possible due to AnonymousOverflow's
+# Hosting ReactFlux under a subpath does not seem to be possible due to ReactFlux's
 # technical limitations.
 reactflux_path_prefix: /
 
-# Public facing base URL of the AnonymousOverflow service.
+# Public facing base URL of the ReactFlux service.
 # It should not end with a slash.
 reactflux_base_url: "{{ reactflux_scheme }}://{{ reactflux_hostname }}{{ '' if reactflux_path_prefix == '/' else reactflux_path_prefix }}"
 
@@ -157,13 +157,13 @@ reactflux_floc_optout_enabled: true
 # See: `reactflux_http_header_strict_transport_security`
 reactflux_hsts_preload_enabled: false
 
-# List of systemd services that the AnonymousOverflow systemd service depends on
+# List of systemd services that the ReactFlux systemd service depends on
 reactflux_systemd_required_services_list: "{{ reactflux_systemd_required_services_list_default + reactflux_systemd_required_services_list_auto + reactflux_systemd_required_services_list_custom }}"
 reactflux_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
 reactflux_systemd_required_services_list_auto: []
 reactflux_systemd_required_services_list_custom: []
 
-# List of systemd services that the AnonymousOverflow systemd service wants
+# List of systemd services that the ReactFlux systemd service wants
 reactflux_systemd_wanted_services_list: []
 
 reactflux_environment_variable_app_url: "{{ reactflux_base_url }}"
