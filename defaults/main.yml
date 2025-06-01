@@ -7,20 +7,18 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-# Project source code URL: https://github.com/httpjamesm/ReactFlux
+# Project source code URL: https://github.com/electh/ReactFlux
 
 reactflux_enabled: true
 
 reactflux_identifier: reactflux
 reactflux_base_path: "/{{ reactflux_identifier }}"
 
-# Only "release" tag is available
-reactflux_version: release
+reactflux_version: latest
 
 reactflux_uid: ''
 reactflux_gid: ''
 
-# Specify URI scheme for reactflux_base_url.
 reactflux_scheme: https
 
 # The hostname at which ReactFlux is served.
@@ -33,15 +31,11 @@ reactflux_hostname: ''
 # technical limitations.
 reactflux_path_prefix: /
 
-# Public facing base URL of the ReactFlux service.
-# It should not end with a slash.
-reactflux_base_url: "{{ reactflux_scheme }}://{{ reactflux_hostname }}{{ '' if reactflux_path_prefix == '/' else reactflux_path_prefix }}"
-
-reactflux_container_image: "{{ reactflux_container_image_registry_prefix }}httpjamesm/reactflux:{{ reactflux_container_image_tag }}"
+reactflux_container_image: "{{ reactflux_container_image_registry_prefix }}electh/reactflux:{{ reactflux_container_image_tag }}"
 reactflux_container_image_tag: "{{ reactflux_version }}"
 reactflux_container_image_registry_prefix: "{{ reactflux_container_image_registry_prefix_upstream }}"
 reactflux_container_image_registry_prefix_upstream: "{{ reactflux_container_image_registry_prefix_upstream_default }}"
-reactflux_container_image_registry_prefix_upstream_default: ghcr.io/
+reactflux_container_image_registry_prefix_upstream_default: docker.io/
 reactflux_container_image_force_pull: "{{ reactflux_container_image.endswith(':latest') }}"
 
 # Controls whether the container exposes its HTTP port (tcp/8080 in the container).
@@ -53,7 +47,7 @@ reactflux_container_http_host_bind_port: ''
 reactflux_container_network: "{{ reactflux_identifier }}"
 
 # The port number in the container
-reactflux_container_http_port: 8080
+reactflux_container_http_port: 2000
 
 # A list of additional container networks that the container would be connected to.
 # The role does not create these networks, so make sure they already exist.
@@ -165,9 +159,6 @@ reactflux_systemd_required_services_list_custom: []
 
 # List of systemd services that the ReactFlux systemd service wants
 reactflux_systemd_wanted_services_list: []
-
-reactflux_environment_variable_app_url: "{{ reactflux_base_url }}"
-reactflux_environment_variable_jwt_signing_secret: 'secret'
 
 # Additional environment variables.
 reactflux_environment_variables_additional_variables: ''
