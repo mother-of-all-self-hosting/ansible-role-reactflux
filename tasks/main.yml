@@ -7,22 +7,22 @@
 - name: Perform AnonymousOverflow installation tasks
   tags:
     - setup-all
-    - setup-anonymousoverflow
+    - setup-reactflux
     - install-all
-    - install-anonymousoverflow
+    - install-reactflux
   block:
     - name: Validate AnonymousOverflow configuration
-      when: anonymousoverflow_enabled | bool
+      when: reactflux_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
     - name: Install AnonymousOverflow
-      when: anonymousoverflow_enabled | bool
+      when: reactflux_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
 
 - name: Perform AnonymousOverflow uninstallation tasks
   tags:
     - setup-all
-    - setup-anonymousoverflow
+    - setup-reactflux
   block:
     - name: Uninstall AnonymousOverflow
-      when: not anonymousoverflow_enabled | bool
+      when: not reactflux_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"
