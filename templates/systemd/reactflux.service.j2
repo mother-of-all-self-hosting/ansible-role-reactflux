@@ -29,7 +29,7 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
       --log-driver=none \
       --user={{ reactflux_uid }}:{{ reactflux_gid }} \
       --cap-drop=ALL \
-      --read-only \
+      --cap-add=NET_BIND_SERVICE \
       --network={{ reactflux_container_network }} \
       {% if reactflux_container_http_host_bind_port %}
       -p {{ reactflux_container_http_host_bind_port }}:{{ reactflux_container_http_port }} \
