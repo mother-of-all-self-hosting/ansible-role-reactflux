@@ -24,6 +24,8 @@ ReactFlux is a third-party web frontend for Miniflux, aimed at providing a more 
 
 See the project's [documentation](https://github.com/electh/ReactFlux/blob/main/README.md) to learn what ReactFlux does and why it might be useful to you.
 
+[<img src="assets/reactflux.png" title="UI in both light and dark themes" width="600" alt="UI in both light and dark themes">](assets/reactflux.png)
+
 ## Prerequisites
 
 To run a ReactFlux instance it is necessary to prepare a [Miniflux](https://miniflux.app/) instance.
