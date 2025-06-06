@@ -5,6 +5,7 @@
 
 ---
 - name: Perform ReactFlux installation tasks
+  when: reactflux_enabled | bool
   tags:
     - setup-all
     - setup-reactflux
@@ -12,17 +13,15 @@
     - install-reactflux
   block:
     - name: Validate ReactFlux configuration
-      when: reactflux_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
     - name: Install ReactFlux
-      when: reactflux_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
 
 - name: Perform ReactFlux uninstallation tasks
+  when: not reactflux_enabled | bool
   tags:
     - setup-all
     - setup-reactflux
   block:
     - name: Uninstall ReactFlux
-      when: not reactflux_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"
