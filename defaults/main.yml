@@ -38,6 +38,12 @@ reactflux_container_image_registry_prefix_upstream: "{{ reactflux_container_imag
 reactflux_container_image_registry_prefix_upstream_default: docker.io/
 reactflux_container_image_force_pull: "{{ reactflux_container_image.endswith(':latest') }}"
 
+reactflux_container_image_self_build: false
+reactflux_container_image_name: "electh/reactflux:{{ reactflux_container_image_tag }}" # the image name must be lowercase
+reactflux_container_repo: "https://github.com/electh/ReactFlux.git"
+reactflux_container_repo_version: "{{ reactflux_version if reactflux_version != 'latest' else 'main' }}"
+reactflux_container_src_files_path: "{{ reactflux_base_path }}/docker-src"
+
 # Controls whether the container exposes its HTTP port (tcp/8080 in the container).
 #
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2586"), or empty string to not expose.
