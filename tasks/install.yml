@@ -55,21 +55,21 @@
   block:
     - name: Ensure ReactFlux repository is present on self-build
       ansible.builtin.git:
-        repo: "{{ reactflux_container_repo }}"
-        version: "{{ reactflux_container_repo_version }}"
-        dest: "{{ reactflux_container_src_files_path }}"
+        repo: "{{ reactflux_container_image_self_build_repo }}"
+        version: "{{ reactflux_container_image_self_build_repo_version }}"
+        dest: "{{ reactflux_container_image_self_build_src_files_path }}"
         force: "yes"
       register: reactflux_git_pull_results
 
     - name: Ensure ReactFlux container image is built
       community.docker.docker_image:
-        name: "{{ reactflux_container_image_name }}"
+        name: "{{ reactflux_container_image_self_build_name }}"
         source: build
         force_source: "{{ reactflux_git_pull_results.changed if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
         force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else reactflux_git_pull_results.changed }}"
         build:
           dockerfile: Dockerfile
-          path: "{{ reactflux_container_src_files_path }}"
+          path: "{{ reactflux_container_image_self_build_src_files_path }}"
           pull: true
           args:
 
