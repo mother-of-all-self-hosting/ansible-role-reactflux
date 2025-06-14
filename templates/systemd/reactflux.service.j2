@@ -39,7 +39,7 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
       {% for arg in reactflux_container_extra_arguments %}
       {{ arg }} \
       {% endfor %}
-      {{ reactflux_container_image }}
+      {{ reactflux_container_image_self_build_name if reactflux_container_image_self_build else reactflux_container_image }}
 
 {% for network in reactflux_container_additional_networks %}
 ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} network connect {{ network }} {{ reactflux_identifier }}
