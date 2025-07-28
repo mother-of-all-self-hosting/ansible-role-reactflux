@@ -84,6 +84,12 @@ reactflux_container_labels_traefik_entrypoints: web-secure
 reactflux_container_labels_traefik_tls: "{{ reactflux_container_labels_traefik_entrypoints != 'web' }}"
 reactflux_container_labels_traefik_tls_certResolver: default  # noqa var-naming
 
+# Controls which additional headers to attach to all HTTP requests.
+# To add your own custom request headers, use `reactflux_container_labels_traefik_additional_request_headers_custom`
+reactflux_container_labels_traefik_additional_request_headers: "{{ reactflux_container_labels_traefik_additional_request_headers_auto | combine(reactflux_container_labels_traefik_additional_request_headers_custom) }}"
+reactflux_container_labels_traefik_additional_request_headers_auto: {}
+reactflux_container_labels_traefik_additional_request_headers_custom: {}
+
 # Controls which additional headers to attach to all HTTP responses.
 # To add your own custom response headers, use `reactflux_container_labels_traefik_additional_response_headers_custom`
 reactflux_container_labels_traefik_additional_response_headers: "{{ reactflux_container_labels_traefik_additional_response_headers_auto | combine(reactflux_container_labels_traefik_additional_response_headers_custom) }}"
