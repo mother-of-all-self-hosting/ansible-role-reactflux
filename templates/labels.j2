@@ -15,7 +15,7 @@ traefik.docker.network={{ reactflux_container_labels_traefik_docker_network }}
 {% set middlewares = [] %}
 
 {% if reactflux_container_labels_traefik_path_prefix != '/' %}
-traefik.http.middlewares.{{ reactflux_identifier }}-slashless-redirect.redirectregex.regex=({{ reactflux_container_labels_traefik_path_prefix | quote }})$
+traefik.http.middlewares.{{ reactflux_identifier }}-slashless-redirect.redirectregex.regex=^({{ reactflux_container_labels_traefik_path_prefix | quote }})$
 traefik.http.middlewares.{{ reactflux_identifier }}-slashless-redirect.redirectregex.replacement=${1}/
 {% set middlewares = middlewares + [reactflux_identifier + '-slashless-redirect'] %}
 {% endif %}
