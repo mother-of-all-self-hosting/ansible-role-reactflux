@@ -28,6 +28,13 @@
         - reactflux_container_labels_traefik_hostname
         - reactflux_container_labels_traefik_path_prefix
 
+    - name: Fail if reactflux_container_labels_traefik_path_prefix is different than /
+      ansible.builtin.fail:
+        msg: >-
+          reactflux_container_labels_traefik_path_prefix (`{{ reactflux_container_labels_traefik_path_prefix }}`) must be `/`.
+          ReactFlux does not support hosting under a subpath yet.
+      when: "reactflux_container_labels_traefik_path_prefix != '/'"
+
     # We ensure it doesn't end with a slash, because we handle both (slash and no-slash).
     # Knowing that `reactflux_container_labels_traefik_path_prefix` does not end with a slash
     # ensures we know how to set these routes up without having to do "does it end with a slash" checks elsewhere.
