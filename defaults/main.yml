@@ -116,7 +116,9 @@ reactflux_container_labels_traefik_additional_response_headers_custom: {}
 reactflux_container_labels_additional_labels: ""
 
 # A list of extra arguments to pass to the container (`docker run` command)
-reactflux_container_extra_arguments: []
+reactflux_container_extra_arguments: "{{ reactflux_container_extra_arguments_auto + reactflux_container_extra_arguments_custom }}"
+reactflux_container_extra_arguments_auto: []
+reactflux_container_extra_arguments_custom: []
 
 # Specifies the value of the `X-XSS-Protection` header
 # Stops pages from loading when they detect reflected cross-site scripting (XSS) attacks.
