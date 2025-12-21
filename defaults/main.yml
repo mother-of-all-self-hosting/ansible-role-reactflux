@@ -118,7 +118,7 @@ reactflux_container_labels_additional_labels: "{{ reactflux_container_labels_add
 reactflux_container_labels_additional_labels_auto: {}
 reactflux_container_labels_additional_labels_custom: {}
 
-# A list of extra arguments to pass to the container (`docker run` command)
+# A list of extra arguments to pass to the container (`docker create` command)
 reactflux_container_extra_arguments: "{{ reactflux_container_extra_arguments_auto + reactflux_container_extra_arguments_custom }}"
 reactflux_container_extra_arguments_auto: []
 reactflux_container_extra_arguments_custom: []
