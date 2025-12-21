@@ -24,7 +24,7 @@ reactflux_scheme: https
 # The hostname at which ReactFlux is served.
 reactflux_hostname: ""
 
-# The path at which ReactFlux is exposed.
+# The path at which ReactFlux is served.
 # This value must either be `/` or not end with a slash (e.g. `/reactflux`).
 #
 # Hosting ReactFlux under a subpath does not seem to be possible due to ReactFlux's
