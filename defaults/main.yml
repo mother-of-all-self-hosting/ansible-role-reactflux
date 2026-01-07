@@ -112,11 +112,11 @@ reactflux_container_labels_traefik_additional_response_headers_custom: {}
 #
 # Example:
 # reactflux_container_labels_additional_labels_custom: |
-#   my.label=1
-#   another.label="here"
-reactflux_container_labels_additional_labels: "{{ reactflux_container_labels_additional_labels_auto | combine(reactflux_container_labels_additional_labels_custom) }}"
-reactflux_container_labels_additional_labels_auto: {}
-reactflux_container_labels_additional_labels_custom: {}
+#   - my.label=1
+#   - another.label="here"
+reactflux_container_labels_additional_labels: "{{ reactflux_container_labels_additional_labels_auto + reactflux_container_labels_additional_labels_custom }}"
+reactflux_container_labels_additional_labels_auto: []
+reactflux_container_labels_additional_labels_custom: []
 
 # A list of extra arguments to pass to the container (`docker create` command)
 reactflux_container_extra_arguments: "{{ reactflux_container_extra_arguments_auto + reactflux_container_extra_arguments_custom }}"

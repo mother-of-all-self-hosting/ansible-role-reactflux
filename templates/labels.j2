@@ -56,4 +56,6 @@ traefik.http.routers.{{ reactflux_identifier }}.tls.certResolver={{ reactflux_co
 traefik.http.services.{{ reactflux_identifier }}.loadbalancer.server.port={{ reactflux_container_http_port }}
 {% endif %}
 
-{{ reactflux_container_labels_additional_labels }}
+{% for arg in reactflux_container_labels_additional_labels %}
+{{ arg }}
+{% endfor %}
