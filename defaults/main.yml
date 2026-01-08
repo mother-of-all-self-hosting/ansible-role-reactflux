@@ -111,7 +111,7 @@ reactflux_container_labels_traefik_additional_response_headers_custom: {}
 # To add your own custom labels, use `reactflux_container_labels_additional_labels_custom`
 #
 # Example:
-# reactflux_container_labels_additional_labels_custom: |
+# reactflux_container_labels_additional_labels_custom:
 #   - my.label=1
 #   - another.label="here"
 reactflux_container_labels_additional_labels: "{{ reactflux_container_labels_additional_labels_auto + reactflux_container_labels_additional_labels_custom }}"
