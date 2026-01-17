@@ -48,7 +48,7 @@ reactflux_container_image_self_build_src_files_path: "{{ reactflux_base_path }}/
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 reactflux_container_network: "{{ reactflux_identifier }}"
 
-# Controls whether the container exposes its HTTP port (tcp/2000 in the container).
+# Specify how the container publishes its HTTP port (as defined by `reactflux_container_http_port`).
 #
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2586"), or empty string to not expose.
 reactflux_container_http_host_bind_port: ""
