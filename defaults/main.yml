@@ -45,13 +45,13 @@ reactflux_container_image_self_build_repo: "https://github.com/electh/ReactFlux.
 reactflux_container_image_self_build_repo_version: "{{ reactflux_version if reactflux_version != 'latest' else 'main' }}"
 reactflux_container_image_self_build_src_files_path: "{{ reactflux_base_path }}/docker-src"
 
+# The base container network. It will be auto-created by this role if it doesn't exist already.
+reactflux_container_network: "{{ reactflux_identifier }}"
+
 # Controls whether the container exposes its HTTP port (tcp/2000 in the container).
 #
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2586"), or empty string to not expose.
 reactflux_container_http_host_bind_port: ""
-
-# The base container network. It will be auto-created by this role if it doesn't exist already.
-reactflux_container_network: "{{ reactflux_identifier }}"
 
 # The port number in the container
 reactflux_container_http_port: 2000
