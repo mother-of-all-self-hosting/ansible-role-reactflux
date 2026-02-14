@@ -49,7 +49,7 @@
       retries: "{{ devture_playbook_help_container_retries_count }}"
       delay: "{{ devture_playbook_help_container_retries_delay }}"
       until: reactflux_container_image_pull_result is not failed
-      changed_when: "'Downloaded newer image' in result.stdout"
+      changed_when: "'Downloaded newer image' in reactflux_container_image_pull_result.stdout"
 
 - name: Run if self-building of ReactFlux container image is enabled
   when: "reactflux_container_image_self_build | bool"
