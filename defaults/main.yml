@@ -37,7 +37,6 @@ reactflux_container_image_tag: "{{ reactflux_version }}"
 reactflux_container_image_registry_prefix: "{{ reactflux_container_image_registry_prefix_upstream }}"
 reactflux_container_image_registry_prefix_upstream: "{{ reactflux_container_image_registry_prefix_upstream_default }}"
 reactflux_container_image_registry_prefix_upstream_default: docker.io/
-reactflux_container_image_force_pull: "{{ reactflux_container_image.endswith(':latest') }}"
 
 reactflux_container_image_self_build: false
 reactflux_container_image_self_build_name: "electh/reactflux:{{ reactflux_container_image_self_build_repo_version }}" # the image name must be lowercase
