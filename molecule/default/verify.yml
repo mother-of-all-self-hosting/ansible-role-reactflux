@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
+# SPDX-FileCopyrightText: 2026 spatterlight
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+---
+- name: Verify Reactflux systemd service
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Wait for Reactflux service to become active (up to 180s)
+      ansible.builtin.systemd:
+        name: reactflux.service
+      register: reactflux_service
+      until: reactflux_service.status.ActiveState == 'active'
+      retries: 36
+      delay: 5
+
+    - name: Assert Reactflux service is active
+      ansible.builtin.assert:
+        that: reactflux_service.status.ActiveState == 'active'
+        fail_msg: "reactflux.service not active ({{ reactflux_service.status.ActiveState }})"
+        success_msg: "reactflux.service is active"
+
+    - name: Wait for Reactflux HTTP endpoint to respond (up to 10m)
+      ansible.builtin.uri:
+        url: "http://localhost:2000/"
+        method: GET
+        status_code: [200, 302]
+        follow_redirects: none
+      register: reactflux_endpoint
+      until: reactflux_endpoint.status in [200, 302]
+      retries: 120
+      delay: 5
+
+    - name: Assert Reactflux HTTP endpoint responds
+      ansible.builtin.assert:
+        that: reactflux_endpoint.status in [200, 302]
+        fail_msg: "Reactflux did not respond as expected ({{ reactflux_endpoint.status | default('no response') }})"
+        success_msg: "Reactflux responded with {{ reactflux_endpoint.status }}"
+
+    - name: Show Reactflux systemd service status summary
+      ansible.builtin.debug:
+        msg:
+          - "Reactflux systemd: {{ reactflux_service.status.ActiveState }}"
+          - "Reactflux HTTP: {{ reactflux_endpoint.status }}"
