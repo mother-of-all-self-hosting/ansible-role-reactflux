@@ -33,7 +33,8 @@ provisioner:
         # Variables for Reactflux
         reactflux_uid: 1000
         reactflux_gid: 1000
-        reactflux_hostname: reactflux
+        reactflux_scheme: http
+        reactflux_hostname: localhost
         reactflux_container_labels_traefik_enabled: false
         reactflux_container_http_host_bind_port: 2000
   env:
