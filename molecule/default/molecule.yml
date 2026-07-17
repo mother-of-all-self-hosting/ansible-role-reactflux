@@ -27,6 +27,10 @@ provisioner:
   inventory:
     group_vars:
       all:
+        # Helper variables
+        reactflux_debug_service_enabled: false
+
+        # Variables for Reactflux
         reactflux_uid: 1000
         reactflux_gid: 1000
         reactflux_hostname: reactflux

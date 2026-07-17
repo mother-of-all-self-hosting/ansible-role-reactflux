@@ -23,6 +23,12 @@
         fail_msg: "reactflux.service not active ({{ reactflux_service.status.ActiveState }})"
         success_msg: "reactflux.service is active"
 
+    - name: Retrieve Reactflux service log for debugging
+      when: reactflux_debug_service_enabled | bool
+      ansible.builtin.command:
+        cmd: journalctl -xeu reactflux.service
+      changed_when: false
+
     - name: Wait for Reactflux HTTP endpoint to respond (up to 10m)
       ansible.builtin.uri:
         url: "http://localhost:2000/"
