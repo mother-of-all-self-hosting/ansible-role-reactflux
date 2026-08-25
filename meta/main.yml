@@ -3,7 +3,7 @@ galaxy_info:
   author: Suguru Hirahara
   company: progressiv
   role_name: reactflux
-  namespace: progressiv
+  namespace: mash
   description: ReactFlux
   platforms:
     - name: Debian
