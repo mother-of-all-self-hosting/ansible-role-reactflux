@@ -58,6 +58,15 @@ provisioner:
         # the labels off and asserts that nothing at all is rendered.
         reactflux_container_labels_traefik_enabled: true
         reactflux_container_labels_traefik_entrypoints: web
+
+        # An extra mount, so that the `--mount` loop in the systemd unit template
+        # is exercised rather than merely present. /etc/hostname is a file that
+        # exists on every platform image and that nothing in the container reads.
+        reactflux_container_additional_volumes_custom:
+          - type: bind
+            src: /etc/hostname
+            dst: /molecule-additional-volume
+            options: readonly
   env:
     # Workaround for https://github.com/ansible/molecule/issues/4391
     ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..:/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles:~/.ansible/roles

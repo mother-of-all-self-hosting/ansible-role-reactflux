@@ -74,6 +74,34 @@
 
         ########################################################################
         #                                                                      #
+        # the mounts the role was asked to add                                 #
+        #                                                                      #
+        ########################################################################
+
+        # `reactflux_container_additional_volumes` is a documented way to mount
+        # your own files into the container, and until this scenario existed the
+        # systemd unit template had no `--mount` loop at all - so setting it did
+        # nothing whatsoever, silently. This is what keeps that from happening
+        # again.
+        - name: Assert that the additional volume the scenario asked for is mounted
+          vars:
+            reactflux_molecule_extra_mount: >-
+              {{ reactflux_molecule_container.Mounts | selectattr('Destination', 'equalto', '/molecule-additional-volume') | list }}
+          ansible.builtin.assert:
+            that:
+              - reactflux_molecule_extra_mount | length == 1
+              - (reactflux_molecule_extra_mount | first).Type == 'bind'
+              - (reactflux_molecule_extra_mount | first).Source == '/etc/hostname'
+              - not (reactflux_molecule_extra_mount | first).RW
+            fail_msg: >-
+              /molecule-additional-volume is not mounted read-only from /etc/hostname. The
+              container's mounts are {{ reactflux_molecule_container.Mounts }}.
+            success_msg: >-
+              The extra volume `reactflux_container_additional_volumes_custom` names is mounted
+              read-only at /molecule-additional-volume
+
+        ########################################################################
+        #                                                                      #
         # the labels the role renders for Traefik                              #
         #                                                                      #
         ########################################################################
@@ -129,6 +157,7 @@
               - "reactflux.service: {{ reactflux_service.status.ActiveState }}"
               - "image: {{ reactflux_molecule_container.Config.Image }} behind {{ reactflux_index.server }}"
               - "published: container {{ reactflux_container_http_port }} on host {{ reactflux_container_http_host_bind_port }}, and nothing else"
+              - "mounts: /molecule-additional-volume, read-only, as the role was asked"
               - "bundle: {{ reactflux_molecule_bundle_paths | first }} as {{ reactflux_bundle.content_type }}"
               - "build: commit {{ reactflux_molecule_build_hash }} of {{ reactflux_molecule_build_date }}"
               - "missing paths: the application shell, so the content type above means something"
