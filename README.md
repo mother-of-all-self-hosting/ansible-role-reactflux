@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2023 Slavi Pantaleev
+SPDX-FileCopyrightText: 2023, 2026 Slavi Pantaleev
 SPDX-FileCopyrightText: 2025, 2026 Suguru Hirahara
 
 SPDX-License-Identifier: AGPL-3.0-or-later
@@ -35,3 +35,11 @@ just prek-install-git-pre-commit-hook
 This role supports [Molecule](https://docs.ansible.com/projects/molecule/), an Ansible testing framework designed for developing and testing Ansible collections, playbooks, and roles.
 
 Refer to [this page](./molecule/README.md) for details about how to utilize it.
+
+### Releases
+
+Releases are tagged automatically. On every push to `main`, [`.github/workflows/autotag.yml`](./.github/workflows/autotag.yml) runs [`bin/compute-next-tag.sh`](./bin/compute-next-tag.sh), which derives the tag from `defaults/main.yml` and from the tags that already exist — never from commit messages, so the result does not depend on the order in which pull requests get merged. A commit that only touches documentation, CI configuration or the Molecule tests is not released.
+
+Tags look like `v<version>-<release>`. ReactFlux publishes no versions of its own (see the comment on `reactflux_version` in [`defaults/main.yml`](./defaults/main.yml)), so the version component is the placeholder `2025.6.2` this repository has used since June 2025, and the release counter carries all of the information. Pinning a real version in `defaults/main.yml` would start a `v<that version>-N` series with no change to the script.
+
+[`bin/test-compute-next-tag.sh`](./bin/test-compute-next-tag.sh) exercises that script against throwaway repositories, and runs as a prek hook whenever it, the script, or `defaults/main.yml` changes.
