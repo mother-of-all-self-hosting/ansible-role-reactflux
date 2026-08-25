@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2023, 2024 Nikita Chernyi
-# SPDX-FileCopyrightText: 2023-2025 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2023-2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2024 Sergio Durigan Junior
 # SPDX-FileCopyrightText: 2025 MASH project contributors
 # SPDX-FileCopyrightText: 2025, 2026 Suguru Hirahara
@@ -14,6 +14,20 @@ reactflux_enabled: true
 reactflux_identifier: reactflux
 reactflux_base_path: "/{{ reactflux_identifier }}"
 
+# ReactFlux publishes no versioned container images, which is why this is the
+# literal `latest` and carries no `# renovate:` annotation for Renovate to bump.
+#
+# `electh/reactflux` on Docker Hub holds `latest`, one tag per commit named after
+# the full git hash, and a `YYYY-MM-DD` series that was discontinued on
+# 2026-01-22. The project does tag its own repository (`v2026.08.22` and so on),
+# and its `deploy-docker.yml` asks docker/metadata-action to turn such a tag into
+# an image tag - but the tags are pushed by `scheduled-tag.yml` using the
+# repository's GITHUB_TOKEN, and a push made with GITHUB_TOKEN does not start
+# another workflow run. Every run of `deploy-docker.yml` to date has been for the
+# `main` branch, and no version-shaped tag exists on Docker Hub.
+#
+# Pinning one of the commit-hash tags instead of `latest` is possible and gives a
+# reproducible installation. The role installs whatever is pinned here.
 reactflux_version: latest
 
 reactflux_uid: ""
@@ -55,7 +69,14 @@ reactflux_container_network_deletion_enabled: true
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2586"), or empty string to not expose.
 reactflux_container_http_host_bind_port: ""
 
-# The port number in the container
+# The port number that ReactFlux listens on inside the container.
+#
+# This describes the container image rather than configuring it: the Caddyfile
+# baked into `electh/reactflux` says `:2000` literally, so nothing this role does
+# can move the port ReactFlux listens on. The value exists so that the port
+# mapping above and the Traefik service label in `../templates/labels.j2` name
+# the right port. `../tasks/validate_config.yml` rejects any other value rather
+# than letting it silently produce a service that nothing can reach.
 reactflux_container_http_port: 2000
 
 # A list of additional container networks that the container would be connected to.

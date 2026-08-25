@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2023, 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2025, 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
@@ -25,6 +25,20 @@
     - reactflux_hostname
     - reactflux_path_prefix
     - reactflux_container_network
+
+# The Caddyfile baked into the container image says `:2000` literally, so this
+# variable describes the image rather than configuring it. See the comment on it
+# in `defaults/main.yml`.
+- name: Fail if reactflux_container_http_port is not the port the container image listens on
+  ansible.builtin.fail:
+    msg: >-
+      reactflux_container_http_port (`{{ reactflux_container_http_port }}`) must be `2000`.
+      The Caddyfile baked into the ReactFlux container image listens on `:2000` literally, so this
+      variable describes the image rather than configuring it. Changing it does not move the port
+      ReactFlux listens on - it only points the port mapping
+      (`reactflux_container_http_host_bind_port`) and the Traefik service label at a port that
+      nothing is listening on.
+  when: "reactflux_container_http_port | int != 2000"
 
 - name: Run if Traefik is enabled
   when: reactflux_container_labels_traefik_enabled | bool

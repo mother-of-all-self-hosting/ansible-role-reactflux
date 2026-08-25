@@ -1,6 +1,6 @@
 <!--
 SPDX-FileCopyrightText: 2020 - 2024 MDAD project contributors
-SPDX-FileCopyrightText: 2020 - 2024 Slavi Pantaleev
+SPDX-FileCopyrightText: 2020 - 2024, 2026 Slavi Pantaleev
 SPDX-FileCopyrightText: 2020 Aaron Raimist
 SPDX-FileCopyrightText: 2020 Chris van Dijk
 SPDX-FileCopyrightText: 2020 Dominik Zajac
@@ -65,6 +65,18 @@ reactflux_hostname: "example.com"
 After adjusting the hostname, make sure to adjust your DNS records to point the domain to your server.
 
 **Note**: hosting ReactFlux under a subpath (by configuring the `reactflux_path_prefix` variable) does not seem to be possible due to ReactFlux's technical limitations.
+
+### About the version and the port
+
+Two variables in [`defaults/main.yml`](../defaults/main.yml) behave differently than their names suggest, and both are worth knowing about before you change them.
+
+`reactflux_version` is the literal `latest`, because ReactFlux publishes no versioned container images. `electh/reactflux` on Docker Hub carries `latest`, one tag per commit named after the full git hash, and a `YYYY-MM-DD` series that was discontinued on 2026-01-22. The project's own repository is tagged (`v2026.08.22` and so on), but those tags are pushed with the repository's `GITHUB_TOKEN`, which by design does not start another workflow run — so the image build that would publish them as image tags never runs. If you would rather install a fixed build than "whatever is current", pin one of the commit-hash tags:
+
+```yaml
+reactflux_version: cebdc310b6940688b020570f3992a81a08a6509c
+```
+
+`reactflux_container_http_port` describes the container image rather than configuring it. The Caddyfile baked into the image listens on `:2000` literally, so changing this variable does not move the port ReactFlux listens on — it only points the port mapping and the Traefik service label at a port that nothing is listening on. The role rejects any other value rather than letting that happen silently.
 
 ### Extending the configuration
 
