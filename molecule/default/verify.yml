@@ -1,53 +1,151 @@
-# SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
+# SPDX-FileCopyrightText: 2026 spatterlight
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+# Verifies the pre-built image ReactFlux publishes on Docker Hub, with the
+# Traefik labels turned on so that templates/labels.j2 is exercised.
+#
+# This is the path almost every operator takes: `reactflux_container_image_self_build`
+# is false by default, so the role pulls `electh/reactflux` at the tag
+# `reactflux_version` names and runs it behind Traefik.
+
 ---
-- name: Verify Reactflux systemd service
+- name: Verify ReactFlux
   hosts: all
   become: true
   gather_facts: false
   tasks:
-    - name: Wait for Reactflux service to become active (up to 180s)
-      ansible.builtin.systemd:
-        name: reactflux.service
-      register: reactflux_service
-      until: reactflux_service.status.ActiveState == 'active'
-      retries: 36
-      delay: 5
+    - name: Verify that ReactFlux works
+      block:
+        - name: Run the shared ReactFlux verification tasks
+          ansible.builtin.include_tasks: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/molecule/verify_tasks.yml"
 
-    - name: Assert Reactflux service is active
-      ansible.builtin.assert:
-        that: reactflux_service.status.ActiveState == 'active'
-        fail_msg: "reactflux.service not active ({{ reactflux_service.status.ActiveState }})"
-        success_msg: "reactflux.service is active"
+        ########################################################################
+        #                                                                      #
+        # the image is the one defaults/main.yml names                         #
+        #                                                                      #
+        ########################################################################
 
-    - name: Retrieve Reactflux service log for debugging
-      when: reactflux_debug_service_enabled | bool
-      ansible.builtin.command:
-        cmd: journalctl -xeu reactflux.service
-      changed_when: false
+        # ReactFlux publishes no versions, so there is no running version to
+        # compare a pinned one against: `electh/reactflux` carries `latest`, a
+        # per-commit hash tag, and nothing else. The most that can be checked is
+        # that the tag the role resolved is the tag that is running - which is
+        # also what would notice if the self-build path leaked into this
+        # scenario and ran a locally built image instead.
+        - name: Assert that the running container is the image defaults/main.yml resolves to
+          ansible.builtin.assert:
+            that:
+              - reactflux_molecule_container.Config.Image is search('electh/reactflux:')
+              - reactflux_molecule_container.Config.Image.endswith(':' ~ reactflux_role_defaults.reactflux_version)
+            fail_msg: >-
+              The container runs {{ reactflux_molecule_container.Config.Image }}, which is not
+              electh/reactflux at the '{{ reactflux_role_defaults.reactflux_version }}' tag
+              `reactflux_version` names
+            success_msg: >-
+              The container runs {{ reactflux_molecule_container.Config.Image }}, the tag
+              `reactflux_version` names
 
-    - name: Wait for Reactflux HTTP endpoint to respond (up to 10m)
-      ansible.builtin.uri:
-        url: "http://localhost:2000/"
-        method: GET
-        status_code: [200, 302]
-        follow_redirects: none
-      register: reactflux_endpoint
-      until: reactflux_endpoint.status in [200, 302]
-      retries: 120
-      delay: 5
+        # A tripwire rather than a check of the role. The image's OCI labels come
+        # from the `caddy:2` base image the upstream Dockerfile ends on and say
+        # nothing about ReactFlux, which is why neither this suite nor
+        # .github/renovate.json treats `org.opencontainers.image.version` as a
+        # version of ReactFlux. If ReactFlux ever starts labelling its own
+        # images, this fails and says to go and use them.
+        - name: Assert that the image's OCI version label is still the base image's
+          vars:
+            reactflux_molecule_labels: "{{ reactflux_molecule_container.Config.Labels }}"
+          ansible.builtin.assert:
+            that:
+              - reactflux_molecule_labels['org.opencontainers.image.title'] == 'Caddy'
+              - reactflux_molecule_labels['org.opencontainers.image.source'] == 'https://github.com/caddyserver/caddy-docker'
+            fail_msg: >-
+              The image's OCI labels are no longer Caddy's
+              (title '{{ reactflux_molecule_labels['org.opencontainers.image.title'] | default('none') }}',
+              version '{{ reactflux_molecule_labels['org.opencontainers.image.version'] | default('none') }}').
+              If ReactFlux now labels its own images, that is a version surface this role and
+              .github/renovate.json should be using, and this assertion should be replaced by one
+              that compares the label against `reactflux_version`.
+            success_msg: >-
+              The image's OCI labels still describe Caddy
+              {{ reactflux_molecule_labels['org.opencontainers.image.version'] }}, not ReactFlux,
+              so there is still no version label to track
 
-    - name: Assert Reactflux HTTP endpoint responds
-      ansible.builtin.assert:
-        that: reactflux_endpoint.status in [200, 302]
-        fail_msg: "Reactflux did not respond as expected ({{ reactflux_endpoint.status | default('no response') }})"
-        success_msg: "Reactflux responded with {{ reactflux_endpoint.status }}"
+        ########################################################################
+        #                                                                      #
+        # the labels the role renders for Traefik                              #
+        #                                                                      #
+        ########################################################################
 
-    - name: Show Reactflux systemd service status summary
-      ansible.builtin.debug:
-        msg:
-          - "Reactflux systemd: {{ reactflux_service.status.ActiveState }}"
-          - "Reactflux HTTP: {{ reactflux_endpoint.status }}"
+        # This scenario turns the Traefik labels on (the self-build one leaves
+        # them off, and asserts they are absent) so that templates/labels.j2 is
+        # exercised. No Traefik is running to read them, but the labels are
+        # rendered from the role's variables and reach the container through
+        # `--label-file`, so what they say is a statement about the role.
+        - name: Assert that the Traefik labels the role renders reached the container
+          vars:
+            reactflux_molecule_labels: "{{ reactflux_molecule_container.Config.Labels }}"
+          ansible.builtin.assert:
+            that:
+              - reactflux_molecule_labels['traefik.enable'] == 'true'
+              - reactflux_molecule_labels['traefik.docker.network'] == 'reactflux'
+              - reactflux_molecule_labels['traefik.http.routers.reactflux.rule'] == 'Host(`' ~ reactflux_hostname ~ '`)'
+              - reactflux_molecule_labels['traefik.http.routers.reactflux.entrypoints'] == reactflux_container_labels_traefik_entrypoints
+              - reactflux_molecule_labels['traefik.http.routers.reactflux.tls'] == 'false'
+              - reactflux_molecule_labels['traefik.http.services.reactflux.loadbalancer.server.port'] == reactflux_container_http_port | string
+              - reactflux_molecule_labels['traefik.http.middlewares.reactflux-add-response-headers.headers.customresponseheaders.X-Content-Type-Options'] == 'nosniff'
+              - reactflux_molecule_labels['traefik.http.middlewares.reactflux-add-response-headers.headers.customresponseheaders.Content-Security-Policy'] == reactflux_role_defaults.reactflux_http_header_content_security_policy
+            fail_msg: "The container's labels are {{ reactflux_molecule_labels }}"
+            success_msg: >-
+              The container carries the Traefik router, service and response-header labels
+              templates/labels.j2 renders, routing `{{ reactflux_hostname }}` to container port
+              {{ reactflux_container_http_port }}
+
+        # `reactflux_container_labels_traefik_entrypoints` is `web` in this
+        # scenario, and `reactflux_container_labels_traefik_tls` is derived from
+        # it. Traefik's TLS-only labels must not be rendered at all in that case,
+        # and neither must the Strict-Transport-Security response header.
+        - name: Assert that no TLS-only labels are rendered for a plain-HTTP entrypoint
+          vars:
+            reactflux_molecule_labels: "{{ reactflux_molecule_container.Config.Labels }}"
+          ansible.builtin.assert:
+            that:
+              - "'traefik.http.routers.reactflux.tls.certResolver' not in reactflux_molecule_labels"
+              - >-
+                'traefik.http.middlewares.reactflux-add-response-headers.headers.customresponseheaders.Strict-Transport-Security'
+                not in reactflux_molecule_labels
+            fail_msg: >-
+              The container carries a TLS-only label even though the entrypoint is
+              '{{ reactflux_container_labels_traefik_entrypoints }}':
+              {{ reactflux_molecule_labels }}
+            success_msg: >-
+              Neither the certResolver label nor the Strict-Transport-Security header is rendered
+              for the '{{ reactflux_container_labels_traefik_entrypoints }}' entrypoint
+
+        - name: Report what was verified
+          ansible.builtin.debug:
+            msg:
+              - "reactflux.service: {{ reactflux_service.status.ActiveState }}"
+              - "image: {{ reactflux_molecule_container.Config.Image }} behind {{ reactflux_index.server }}"
+              - "published: container {{ reactflux_container_http_port }} on host {{ reactflux_container_http_host_bind_port }}, and nothing else"
+              - "bundle: {{ reactflux_molecule_bundle_paths | first }} as {{ reactflux_bundle.content_type }}"
+              - "build: commit {{ reactflux_molecule_build_hash }} of {{ reactflux_molecule_build_date }}"
+              - "missing paths: the application shell, so the content type above means something"
+              - "REACTFLUX VERIFICATION COMPLETE"
+      rescue:
+        # Whatever went wrong, the reason is usually in the service log, and
+        # nobody reading a failed CI run has a container left to look in.
+        - name: Retrieve the ReactFlux service log
+          ansible.builtin.command:
+            cmd: journalctl --no-pager -xeu reactflux.service
+          register: reactflux_service_log
+          changed_when: false
+
+        - name: Show the ReactFlux service log
+          ansible.builtin.debug:
+            var: reactflux_service_log.stdout_lines
+
+        - name: Fail because verification did not pass
+          ansible.builtin.fail:
+            msg: "ReactFlux verification failed. The service log is printed above."

@@ -1,5 +1,6 @@
-# SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
+# SPDX-FileCopyrightText: 2026 spatterlight
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -12,6 +13,8 @@ dependency:
 driver:
   name: docker
 platforms:
+  # The name embeds both the role and the scenario, so that scenarios running in
+  # parallel - here or on a shared CI runner - cannot collide.
   - name: reactflux-${MOLECULE_DISTRO:-ubuntu2604}-default
     image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu2604}-ansible:latest"
     command: ${MOLECULE_DOCKER_COMMAND:-""}
@@ -28,16 +31,33 @@ provisioner:
   inventory:
     group_vars:
       all:
-        # Helper variables
-        reactflux_debug_service_enabled: false
+        # Where the verification tasks reach ReactFlux. Ansible runs inside the
+        # platform container, which is where the Docker daemon it installed
+        # publishes container ports.
+        reactflux_molecule_base_url: "http://127.0.0.1:{{ reactflux_container_http_host_bind_port }}"
 
-        # Variables for Reactflux
         reactflux_uid: 1000
         reactflux_gid: 1000
+
         reactflux_scheme: http
-        reactflux_hostname: localhost
-        reactflux_container_labels_traefik_enabled: false
-        reactflux_container_http_host_bind_port: 2000
+
+        # A hostname nothing would produce by accident, so that the Traefik
+        # router rule the role renders can be checked against it.
+        reactflux_hostname: reactflux-default.molecule.example.com
+
+        # Deliberately not the same as the container port, so that a port mapping
+        # which merely echoed the container port would not pass verification.
+        reactflux_container_http_host_bind_port: 21987
+        reactflux_container_http_port: 2000
+
+        # Values only templates/env.j2 could have put into the container.
+        reactflux_environment_variables_tz: Europe/Sofia
+        reactflux_environment_variables_additional_variables: MASH_MOLECULE_SCENARIO=reactflux-default
+
+        # This scenario exercises templates/labels.j2; `default-selfbuild` turns
+        # the labels off and asserts that nothing at all is rendered.
+        reactflux_container_labels_traefik_enabled: true
+        reactflux_container_labels_traefik_entrypoints: web
   env:
     # Workaround for https://github.com/ansible/molecule/issues/4391
     ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..:/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles:~/.ansible/roles

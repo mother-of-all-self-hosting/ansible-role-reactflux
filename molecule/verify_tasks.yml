@@ -1,0 +1,331 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
+# SPDX-FileCopyrightText: 2026 spatterlight
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# The part of the verification suite that both ReactFlux scenarios run.
+#
+# ReactFlux is a compiled single-page application and nothing else: a bundle of
+# HTML, CSS and JavaScript baked into an image whose other half is Caddy serving
+# it from /srv. It has no backend of its own. The Miniflux server it reads from
+# is typed into the login form by whoever uses it and kept in the browser's local
+# storage - it is not baked in at build time and this role does not configure it,
+# so nothing here needs a Miniflux to talk to, and nothing here may claim that
+# ReactFlux can talk to one.
+#
+# That shapes what this suite can honestly claim:
+#
+# - it can prove that the container the role created is the image the role names,
+#   attached to the network the role creates, publishing the port the role was
+#   told to publish and nothing else
+# - it can prove that values only this role's templates could have produced
+#   reached the container
+# - it can prove that what comes back over that port is ReactFlux's compiled
+#   bundle rather than some other image's welcome page
+# - it cannot say anything about how the application behaves once a browser runs
+#   it, because nothing here executes any JavaScript
+#
+# Every claim below is written so that it can fail, and "it answered 200" is
+# worth nothing at all here. The Caddyfile baked into the image is four lines
+# long and the third is `try_files {path} {path}/ /index.html`, so this server
+# answers 200 with the application shell for every path in existence, including
+# every path that does not exist. The content type of a hashed asset is what
+# survives that, and the deliberately absent asset below is what proves the
+# content type discriminates.
+
+---
+- name: Include the role's default variables under a separate name
+  ansible.builtin.include_vars:
+    # Only leaf values may be read out of this. Anything written in terms of
+    # another variable would be resolved in the surrounding scope, where the
+    # role's variables do not exist. Loading it under a name of its own also
+    # keeps it from outranking the values this scenario deliberately tuned.
+    file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
+    name: reactflux_role_defaults
+
+- name: Wait for the ReactFlux systemd service to become active
+  ansible.builtin.systemd_service:
+    name: reactflux.service
+  register: reactflux_service
+  until: reactflux_service.status.ActiveState == 'active'
+  retries: 36
+  delay: 5
+
+# `Restart=always` in the systemd unit means that even a container which crashes
+# and gets restarted reads as active here, so this is a precondition rather than
+# a result.
+- name: Assert that the ReactFlux systemd service is active
+  ansible.builtin.assert:
+    that: reactflux_service.status.ActiveState == 'active'
+    fail_msg: "reactflux.service is {{ reactflux_service.status.ActiveState }}, not active"
+    success_msg: "reactflux.service is active"
+
+########################################################################
+#                                                                      #
+# what the role handed to Docker                                       #
+#                                                                      #
+########################################################################
+
+- name: Inspect the ReactFlux container
+  ansible.builtin.command:
+    cmd: docker inspect reactflux
+  register: reactflux_container_inspect
+  changed_when: false
+  retries: 12
+  delay: 5
+  until: reactflux_container_inspect.rc == 0
+
+- name: Set facts about the ReactFlux container
+  ansible.builtin.set_fact:
+    reactflux_molecule_container: "{{ reactflux_container_inspect.stdout | from_json | first }}"
+
+- name: Assert that ReactFlux is running on the container network the role creates
+  ansible.builtin.assert:
+    that: reactflux_molecule_container.NetworkSettings.Networks.keys() | list == ['reactflux']
+    fail_msg: >-
+      The container is attached to
+      {{ reactflux_molecule_container.NetworkSettings.Networks.keys() | list }}, not to the single
+      `reactflux` network `reactflux_container_network` names
+    success_msg: "The container is attached to the `reactflux` container network and to nothing else"
+
+# `reactflux_container_http_host_bind_port` is a value nothing but this role
+# supplies, and the mapping has to name the port the server inside the container
+# is expected to listen on. Both scenarios set it to something other than the
+# container port, so a mapping that merely echoed the container port would not
+# pass. Together with the successful fetch further down - which arrives through
+# this mapping and therefore through container port
+# `reactflux_container_http_port` - this is also what shows that the value of
+# `reactflux_container_http_port` describes the image correctly. The role cannot
+# set that port (the baked Caddyfile says `:2000` literally), so all it can do is
+# name it right, and a wrong name would leave nothing answering here.
+- name: Assert that the container publishes the port the scenario asked for
+  vars:
+    reactflux_molecule_published: >-
+      {{ reactflux_molecule_container.NetworkSettings.Ports.get(reactflux_container_http_port | string ~ '/tcp') or [] }}
+  ansible.builtin.assert:
+    that:
+      - reactflux_molecule_published | length > 0
+      - reactflux_molecule_published | map(attribute='HostPort') | unique | list == [reactflux_container_http_host_bind_port | string]
+    fail_msg: >-
+      Container port {{ reactflux_container_http_port }} is published as
+      {{ reactflux_molecule_published }}, and not on host port
+      {{ reactflux_container_http_host_bind_port }}.
+      The container publishes {{ reactflux_molecule_container.NetworkSettings.Ports }}.
+    success_msg: >-
+      Container port {{ reactflux_container_http_port }} is published on host port
+      {{ reactflux_container_http_host_bind_port }}
+
+# The image declares four ports (2000, 2019, 80 and 443), of which 2019 is
+# Caddy's admin API - it can reconfigure the server and is not something to hand
+# out. The systemd unit publishes one port and only one, and this is what would
+# notice if that stopped being true.
+- name: Assert that no port other than ReactFlux's HTTP port is published
+  vars:
+    reactflux_molecule_bound_ports: >-
+      {{ reactflux_molecule_container.NetworkSettings.Ports | dict2items | selectattr('value') | map(attribute='key') | sort }}
+  ansible.builtin.assert:
+    that: reactflux_molecule_bound_ports == [reactflux_container_http_port | string ~ '/tcp']
+    fail_msg: >-
+      The container publishes {{ reactflux_molecule_bound_ports }}. The image also exposes Caddy's
+      admin API on 2019, which must not be reachable from outside the container.
+    success_msg: "The container publishes {{ reactflux_molecule_bound_ports }} and nothing else"
+
+# The environment file is written by `templates/env.j2` and reaches the container
+# through `--env-file` in the systemd unit. Both values below are ones this
+# scenario chose, so an env file that was not rendered, not written or not passed
+# cannot pass this. What Caddy does with TZ (timestamps in its log) is its own
+# business; that the role's file arrived is the role's business.
+- name: Assert that the role's environment file reached the container
+  vars:
+    reactflux_molecule_env: "{{ reactflux_molecule_container.Config.Env }}"
+  ansible.builtin.assert:
+    that:
+      - "'TZ=' ~ reactflux_environment_variables_tz in reactflux_molecule_env"
+      - reactflux_environment_variables_additional_variables in reactflux_molecule_env
+    fail_msg: "The container's environment is {{ reactflux_molecule_env }}"
+    success_msg: >-
+      The container's environment carries TZ={{ reactflux_environment_variables_tz }} and
+      {{ reactflux_environment_variables_additional_variables }}, both rendered by templates/env.j2
+
+# The user and the capability set come from `templates/systemd/reactflux.service.j2`
+# and from nowhere else. A container that Docker started with its own defaults
+# would run as root with the full default capability set.
+#
+# Docker normalizes capability names on the way in, so what comes back out of
+# `docker inspect` is `CAP_NET_BIND_SERVICE` on some versions and
+# `NET_BIND_SERVICE` on others. The prefix is stripped before comparing rather
+# than making the assertion depend on which Docker the test host has.
+- name: Assert that the container runs as the role's user, with the role's capabilities
+  vars:
+    reactflux_molecule_host_config: "{{ reactflux_molecule_container.HostConfig }}"
+  ansible.builtin.assert:
+    that:
+      - reactflux_molecule_container.Config.User == reactflux_uid | string ~ ':' ~ reactflux_gid | string
+      - reactflux_molecule_host_config.CapDrop | map('regex_replace', '^CAP_', '') | list == ['ALL']
+      - reactflux_molecule_host_config.CapAdd | map('regex_replace', '^CAP_', '') | list == ['NET_BIND_SERVICE']
+    fail_msg: >-
+      The container runs as '{{ reactflux_molecule_container.Config.User }}' with
+      CapDrop={{ reactflux_molecule_host_config.CapDrop }} and
+      CapAdd={{ reactflux_molecule_host_config.CapAdd }}
+    success_msg: >-
+      The container runs as {{ reactflux_molecule_container.Config.User }} with every capability
+      dropped except NET_BIND_SERVICE, as templates/systemd/reactflux.service.j2 asks
+
+########################################################################
+#                                                                      #
+# what Caddy is actually serving                                       #
+#                                                                      #
+########################################################################
+
+- name: Fetch the ReactFlux application shell
+  ansible.builtin.uri:
+    url: "{{ reactflux_molecule_base_url }}/"
+    method: GET
+    status_code: [200]
+    follow_redirects: none
+    return_content: true
+  register: reactflux_index
+  until: reactflux_index.status == 200
+  retries: 60
+  delay: 5
+
+- name: Find the script the ReactFlux application shell loads
+  ansible.builtin.set_fact:
+    reactflux_molecule_bundle_paths: "{{ reactflux_index.content | regex_findall('src=\"(/assets/[^\"]+\\.js)\"') }}"
+
+# A web server pointed at an empty or wrong document root, or one still serving
+# the welcome page of its own image, gets past a status-code check untroubled.
+- name: Assert that the document root holds ReactFlux and not something else
+  ansible.builtin.assert:
+    that:
+      - reactflux_index.content is search('<title>ReactFlux</title>')
+      - reactflux_index.content is search('A Simple but Powerful RSS Reader for Miniflux')
+      - reactflux_molecule_bundle_paths | length == 1
+    fail_msg: >-
+      The page served at {{ reactflux_molecule_base_url }}/ does not look like ReactFlux's
+      application shell. It is {{ reactflux_index.content | length }} bytes long and loads the
+      scripts {{ reactflux_molecule_bundle_paths }}.
+    success_msg: >-
+      {{ reactflux_molecule_base_url }}/ serves ReactFlux's application shell, which loads
+      {{ reactflux_molecule_bundle_paths | first }}
+
+- name: Assert that ReactFlux is served by the Caddy the image is built on
+  ansible.builtin.assert:
+    that:
+      - reactflux_index.server is defined
+      - reactflux_index.server == 'Caddy'
+    fail_msg: >-
+      The image answered with Server '{{ reactflux_index.server | default('no Server header') }}'
+      rather than Caddy. The fallback expectations below are written for the Caddyfile baked into
+      this image and need re-checking against whatever this now is.
+    success_msg: "ReactFlux is served by {{ reactflux_index.server }}, out of the image's own /srv"
+
+- name: Fetch the compiled ReactFlux bundle the application shell loads
+  ansible.builtin.uri:
+    url: "{{ reactflux_molecule_base_url }}{{ reactflux_molecule_bundle_paths | first }}"
+    method: GET
+    status_code: [200]
+    follow_redirects: none
+    return_content: true
+  register: reactflux_bundle
+
+# The content type is the assertion that survives a fallback page. The
+# deliberately absent asset below asks for something of exactly the same shape
+# and is required to come back as the HTML shell, so this check is known to
+# discriminate rather than assumed to.
+#
+# The substring is deliberate: Caddy says `text/javascript; charset=utf-8` here,
+# while nginx would say `application/javascript`.
+- name: Assert that the bundle is served as JavaScript
+  ansible.builtin.assert:
+    that:
+      - "'javascript' in reactflux_bundle.content_type"
+      - reactflux_bundle.content | length > 100000
+    fail_msg: >-
+      {{ reactflux_molecule_bundle_paths | first }} came back as
+      '{{ reactflux_bundle.content_type }}', {{ reactflux_bundle.content | length }} bytes.
+      The fallback page would look exactly like this.
+    success_msg: >-
+      {{ reactflux_molecule_bundle_paths | first }} is served as
+      '{{ reactflux_bundle.content_type }}', {{ reactflux_bundle.content | length }} bytes
+
+########################################################################
+#                                                                      #
+# the negative control                                                 #
+#                                                                      #
+########################################################################
+
+# Caddy is configured here with `try_files {path} {path}/ /index.html`, so it
+# answers 200 with the application shell for every path in existence, including
+# all the ones that do not exist. Asserting that outright is what makes the
+# content type above mean something: the two requests below are shaped exactly
+# like the bundle request that succeeded, and they must come back as HTML.
+- name: Ask for paths this ReactFlux has no file for
+  ansible.builtin.uri:
+    url: "{{ reactflux_molecule_base_url }}{{ item }}"
+    method: GET
+    status_code: [200]
+    follow_redirects: none
+    return_content: true
+  register: reactflux_missing
+  loop:
+    - /molecule-no-such-path
+    - /assets/molecule-no-such-asset-deadbeef.js
+
+- name: Assert that a path with no file behind it answers with the application shell
+  ansible.builtin.assert:
+    that:
+      - "'html' in item.content_type"
+      - "'javascript' not in item.content_type"
+      - item.content == reactflux_index.content
+    fail_msg: >-
+      {{ item.item }} came back as '{{ item.content_type }}',
+      {{ item.content | length }} bytes. It was expected to be answered with the application shell
+      by Caddy's try_files fallback. If this image no longer has that fallback, the content-type
+      assertion on the bundle above is no longer known to discriminate and this suite needs a
+      different negative control.
+    success_msg: >-
+      {{ item.item }} is answered with the application shell as '{{ item.content_type }}', so the
+      bundle coming back as JavaScript is a real distinction
+  loop: "{{ reactflux_missing.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+########################################################################
+#                                                                      #
+# which build of ReactFlux this is                                     #
+#                                                                      #
+########################################################################
+
+# ReactFlux has no version to report - see the comment on `reactflux_version` in
+# defaults/main.yml - and the image's OCI labels describe Caddy rather than
+# ReactFlux. What the compiled bundle does carry is a build stamp: the project's
+# `prebuild` script writes the abbreviated commit hash and commit date of the
+# checkout it was built from into src/version-info.json, which Vite compiles in.
+#
+# The `default-selfbuild` scenario compares that hash against the checkout the
+# role made, which is a real identity check. Here it is the only thing there is
+# to read, so it is extracted, asserted to be present and well-formed, and
+# reported.
+#
+# The quoting around the two values is whatever the minifier felt like, so the
+# patterns match one character of it rather than a particular quote.
+- name: Read the build stamp compiled into the ReactFlux bundle
+  ansible.builtin.set_fact:
+    reactflux_molecule_build_hash: "{{ (reactflux_bundle.content | regex_findall('gitHash:.([0-9a-f]{7,40}).') + ['']) | first }}"
+    reactflux_molecule_build_date: "{{ (reactflux_bundle.content | regex_findall('gitDate:.(20[0-9]{2}-[0-9]{2}-[0-9]{2}[ 0-9:+-]*)') + ['']) | first }}"
+
+- name: Assert that the bundle carries a build stamp
+  ansible.builtin.assert:
+    that:
+      - reactflux_molecule_build_hash | length >= 7
+      - reactflux_molecule_build_date | length > 0
+    fail_msg: >-
+      The bundle carries no `gitHash`/`gitDate` build stamp
+      (hash '{{ reactflux_molecule_build_hash }}', date '{{ reactflux_molecule_build_date }}').
+      ReactFlux's src/scripts/version-info.js is what writes it, and it is the only thing about
+      this application that identifies which build it is.
+    success_msg: >-
+      The bundle was built from commit {{ reactflux_molecule_build_hash }} of
+      {{ reactflux_molecule_build_date }}

@@ -41,17 +41,25 @@ source ./molecule/venv/bin/activate
 pip3 install -r ./molecule/requirements.txt
 ```
 
+## What the scenarios can and cannot claim
+
+ReactFlux is a compiled single-page application and nothing else: a bundle of HTML, CSS and JavaScript baked into an image whose other half is [Caddy](https://caddyserver.com/) serving it out of `/srv`. It has no backend. The Miniflux server it reads from is typed into its login form and kept in the browser's local storage — it is not baked in at build time, and this role does not configure it. Nothing here therefore needs a Miniflux instance, and nothing here may claim that ReactFlux can reach one.
+
+One consequence is worth knowing before reading or extending [`verify_tasks.yml`](./verify_tasks.yml). The Caddyfile inside the image is four lines long and the third is `try_files {path} {path}/ /index.html`, so **every** path answers `200` with the application shell — including a hashed `.js` asset that does not exist. A status code proves nothing here. What survives the fallback is the **content type** of a real hashed asset, and the suite asks for a deliberately absent asset of the same shape and requires it to come back as HTML, so that the content-type check is known to discriminate rather than assumed to.
+
+The other consequence is that there is no version to assert: ReactFlux publishes no versioned images, and the image's OCI labels describe the `caddy:2` base image rather than ReactFlux (`org.opencontainers.image.title` is literally `Caddy`). What the compiled bundle does carry is a build stamp — the abbreviated commit hash and commit date of the checkout it was built from, written by ReactFlux's `prebuild` script into `src/version-info.json` and compiled in by Vite. The `default-selfbuild` scenario compares that hash against the checkout the role made, which is a real identity check; the `default` scenario reports it.
+
 ## Scenarios
 
 Currently these testing scenarios are available:
 
 ### `default`
 
-Tests a standard Reactflux installation.
+Runs the pre-built `electh/reactflux` image the role pulls by default, with the Traefik labels turned on so that [`../templates/labels.j2`](../templates/labels.j2) is exercised. Asserts that the container is the image `reactflux_version` names, on the network the role creates, publishing the role's HTTP port and nothing else (the image also exposes Caddy's admin API on 2019), running as the role's user with every capability except `NET_BIND_SERVICE` dropped, carrying the environment the role rendered — and that what comes back over that port is ReactFlux's application shell and its compiled bundle.
 
 ### `default-selfbuild`
 
-Tests a standard Reactflux installation with self-building the container image.
+Builds the image from a checkout of ReactFlux instead of pulling one, under an image name that exists in no registry, and asserts that the build stamp in the served bundle is the commit the role's checkout is on. Leaves the Traefik labels off and asserts that none are rendered, which is the negative control for the `default` scenario's label assertions.
 
 ## Running
 

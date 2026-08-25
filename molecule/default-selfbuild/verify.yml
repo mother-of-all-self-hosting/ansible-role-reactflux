@@ -1,53 +1,129 @@
-# SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
+# SPDX-FileCopyrightText: 2026 spatterlight
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+# Verifies the self-build path: instead of pulling `electh/reactflux`, the role
+# clones ReactFlux, builds the image from the checkout, and runs that.
+#
+# The build stamp compiled into the bundle is what makes this scenario more than
+# a repeat of the other one. ReactFlux's `prebuild` script writes the abbreviated
+# commit hash of the checkout it is building into src/version-info.json, which
+# Vite compiles into the bundle - so the hash that comes back over HTTP can be
+# compared against the commit the role's own `git` task left on disk. A build
+# that silently ran against something else, or a container that quietly fell back
+# to a pulled image, does not survive that.
+#
+# The Traefik labels are off here (the `default` scenario has them on and asserts
+# their contents), so this scenario is also what shows that
+# `reactflux_container_labels_traefik_enabled: false` really renders nothing.
+
 ---
-- name: Verify Reactflux systemd service
+- name: Verify ReactFlux
   hosts: all
   become: true
   gather_facts: false
   tasks:
-    - name: Wait for Reactflux service to become active (up to 180s)
-      ansible.builtin.systemd:
-        name: reactflux.service
-      register: reactflux_service
-      until: reactflux_service.status.ActiveState == 'active'
-      retries: 36
-      delay: 5
+    - name: Verify that ReactFlux works
+      block:
+        - name: Run the shared ReactFlux verification tasks
+          ansible.builtin.include_tasks: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/molecule/verify_tasks.yml"
 
-    - name: Assert Reactflux service is active
-      ansible.builtin.assert:
-        that: reactflux_service.status.ActiveState == 'active'
-        fail_msg: "reactflux.service not active ({{ reactflux_service.status.ActiveState }})"
-        success_msg: "reactflux.service is active"
+        ########################################################################
+        #                                                                      #
+        # the running image is the one this host built                         #
+        #                                                                      #
+        ########################################################################
 
-    - name: Retrieve Reactflux service log for debugging
-      when: reactflux_debug_service_enabled | bool
-      ansible.builtin.command:
-        cmd: journalctl -xeu reactflux.service
-      changed_when: false
+        # `reactflux_container_image_self_build_name` is set by this scenario to
+        # a name that exists nowhere but on this host. Nothing could pull it, so
+        # a container running it was built here.
+        - name: Assert that the running container is the image this host built
+          ansible.builtin.assert:
+            that: reactflux_molecule_container.Config.Image == reactflux_container_image_self_build_name
+            fail_msg: >-
+              The container runs {{ reactflux_molecule_container.Config.Image }} rather than
+              {{ reactflux_container_image_self_build_name }}, the image the self-build path was
+              asked to produce. A pulled image here would mean the self-build never happened.
+            success_msg: >-
+              The container runs {{ reactflux_molecule_container.Config.Image }}, which exists only
+              on this host and therefore was built here
 
-    - name: Wait for Reactflux HTTP endpoint to respond (up to 10m)
-      ansible.builtin.uri:
-        url: "http://localhost:2000/"
-        method: GET
-        status_code: [200, 302]
-        follow_redirects: none
-      register: reactflux_endpoint
-      until: reactflux_endpoint.status in [200, 302]
-      retries: 120
-      delay: 5
+        # `ansible.builtin.git` is a module for putting a checkout somewhere, not
+        # for reading one: pointing it at this path would fetch and check out
+        # again, which is exactly what must not happen between the build and the
+        # question being asked. `git rev-parse` only reads.
+        - name: Read the commit the role's checkout of ReactFlux is on  # noqa: command-instead-of-module
+          ansible.builtin.command:
+            cmd: "git -C {{ reactflux_container_image_self_build_src_files_path }} rev-parse HEAD"
+          register: reactflux_molecule_checkout_head
+          changed_when: false
 
-    - name: Assert Reactflux HTTP endpoint responds
-      ansible.builtin.assert:
-        that: reactflux_endpoint.status in [200, 302]
-        fail_msg: "Reactflux did not respond as expected ({{ reactflux_endpoint.status | default('no response') }})"
-        success_msg: "Reactflux responded with {{ reactflux_endpoint.status }}"
+        # This is the assertion the scenario exists for. The hash in the bundle
+        # was produced by `git rev-parse --short HEAD` inside the build, from the
+        # .git directory of the checkout below - so a bundle that came from
+        # anywhere else, or a checkout the build did not actually use, fails
+        # here.
+        - name: Assert that the served bundle was built from that checkout
+          vars:
+            reactflux_molecule_checkout_sha: "{{ reactflux_molecule_checkout_head.stdout | trim }}"
+          ansible.builtin.assert:
+            that: reactflux_molecule_checkout_sha.startswith(reactflux_molecule_build_hash)
+            fail_msg: >-
+              The bundle served at {{ reactflux_molecule_base_url }} was built from commit
+              {{ reactflux_molecule_build_hash }}, but
+              {{ reactflux_container_image_self_build_src_files_path }} is on
+              {{ reactflux_molecule_checkout_sha }}. The image being served did not come from this
+              checkout.
+            success_msg: >-
+              The served bundle carries commit {{ reactflux_molecule_build_hash }}, which is the
+              checkout at {{ reactflux_container_image_self_build_src_files_path }}
+              ({{ reactflux_molecule_checkout_sha }})
 
-    - name: Show Reactflux systemd service status summary
-      ansible.builtin.debug:
-        msg:
-          - "Reactflux systemd: {{ reactflux_service.status.ActiveState }}"
-          - "Reactflux HTTP: {{ reactflux_endpoint.status }}"
+        ########################################################################
+        #                                                                      #
+        # the negative control for the `default` scenario's labels              #
+        #                                                                      #
+        ########################################################################
+
+        - name: Assert that no Traefik labels are rendered when Traefik is off
+          vars:
+            reactflux_molecule_labels: "{{ reactflux_molecule_container.Config.Labels }}"
+            reactflux_molecule_traefik_labels: >-
+              {{ reactflux_molecule_labels.keys() | select('match', '^traefik[.]') | list }}
+          ansible.builtin.assert:
+            that: reactflux_molecule_traefik_labels | length == 0
+            fail_msg: >-
+              `reactflux_container_labels_traefik_enabled` is false, yet the container carries
+              {{ reactflux_molecule_traefik_labels }}
+            success_msg: >-
+              With `reactflux_container_labels_traefik_enabled` off, templates/labels.j2 rendered
+              no Traefik labels at all
+
+        - name: Report what was verified
+          ansible.builtin.debug:
+            msg:
+              - "reactflux.service: {{ reactflux_service.status.ActiveState }}"
+              - "image: {{ reactflux_molecule_container.Config.Image }} (built here) behind {{ reactflux_index.server }}"
+              - "published: container {{ reactflux_container_http_port }} on host {{ reactflux_container_http_host_bind_port }}, and nothing else"
+              - "bundle: {{ reactflux_molecule_bundle_paths | first }} as {{ reactflux_bundle.content_type }}"
+              - "build: commit {{ reactflux_molecule_build_hash }}, matching the checkout at {{ reactflux_container_image_self_build_src_files_path }}"
+              - "missing paths: the application shell, so the content type above means something"
+              - "REACTFLUX SELF-BUILD VERIFICATION COMPLETE"
+      rescue:
+        # Whatever went wrong, the reason is usually in the service log, and
+        # nobody reading a failed CI run has a container left to look in.
+        - name: Retrieve the ReactFlux service log
+          ansible.builtin.command:
+            cmd: journalctl --no-pager -xeu reactflux.service
+          register: reactflux_service_log
+          changed_when: false
+
+        - name: Show the ReactFlux service log
+          ansible.builtin.debug:
+            var: reactflux_service_log.stdout_lines
+
+        - name: Fail because verification did not pass
+          ansible.builtin.fail:
+            msg: "ReactFlux verification failed. The service log is printed above."
