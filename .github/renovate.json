@@ -9,6 +9,6 @@
     "Should ReactFlux ever publish versioned images and this role pin one, revisit: ReactFlux is a compiled single-page application served by Caddy out of a document root inside the image, with no database, no volume and no state of any kind, so a patch bump carries none of the unattended-migration risk that keeps automerge off elsewhere in this fleet. The Molecule `default` scenario already runs the image the role names and reads the build stamp compiled into the served bundle back out of it, and `bin/compute-next-tag.sh` already follows a pinned version with no change. The evidence for automerging patch bumps would be there."
   ],
   "extends": [
-    "github>mother-of-all-self-hosting/renovate-config#v1.0.0"
+    "github>mother-of-all-self-hosting/renovate-config#v1.1.0"
   ]
 }
