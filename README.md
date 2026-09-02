@@ -38,8 +38,6 @@ Refer to [this page](./molecule/README.md) for details about how to utilize it.
 
 ### Releases
 
-Releases are tagged automatically. On every push to `main`, [`.github/workflows/autotag.yml`](./.github/workflows/autotag.yml) runs [`bin/compute-next-tag.sh`](./bin/compute-next-tag.sh), which derives the tag from `defaults/main.yml` and from the tags that already exist — never from commit messages, so the result does not depend on the order in which pull requests get merged. A commit that only touches documentation, CI configuration or the Molecule tests is not released.
+Tags are created by [`.github/workflows/autotag.yml`](.github/workflows/autotag.yml), which asks [`bin/compute-next-tag.sh`](bin/compute-next-tag.sh) what the commit on `main` should be released as. The answer comes from the ReactFlux version pinned in [`defaults/main.yml`](defaults/main.yml) and from the tags that already exist, so a commit that only touches documentation or CI is not released at all, and any change to the role itself is — without waiting for a dependency bump to carry it along.
 
-Tags look like `v<version>-<release>`. ReactFlux publishes no versions of its own (see the comment on `reactflux_version` in [`defaults/main.yml`](./defaults/main.yml)), so the version component is the placeholder `2025.6.2` this repository has used since June 2025, and the release counter carries all of the information. Pinning a real version in `defaults/main.yml` would start a `v<that version>-N` series with no change to the script.
-
-[`bin/test-compute-next-tag.sh`](./bin/test-compute-next-tag.sh) exercises that script against throwaway repositories, and runs as a prek hook whenever it, the script, or `defaults/main.yml` changes.
+[`bin/test-compute-next-tag.sh`](bin/test-compute-next-tag.sh) exercises that script against throwaway repositories, and runs as a prek hook.
