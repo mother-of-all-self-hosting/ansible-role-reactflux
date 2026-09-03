@@ -151,16 +151,16 @@
               Neither the certResolver label nor the Strict-Transport-Security header is rendered
               for the '{{ reactflux_container_labels_traefik_entrypoints }}' entrypoint
 
-        - name: Report what was verified
+        - name: Show ReactFlux verification summary
           ansible.builtin.debug:
             msg:
-              - "reactflux.service: {{ reactflux_service.status.ActiveState }}"
-              - "image: {{ reactflux_molecule_container.Config.Image }} behind {{ reactflux_index.server }}"
-              - "published: container {{ reactflux_container_http_port }} on host {{ reactflux_container_http_host_bind_port }}, and nothing else"
-              - "mounts: /molecule-additional-volume, read-only, as the role was asked"
-              - "bundle: {{ reactflux_molecule_bundle_paths | first }} as {{ reactflux_bundle.content_type }}"
-              - "build: commit {{ reactflux_molecule_build_hash }} of {{ reactflux_molecule_build_date }}"
-              - "missing paths: the application shell, so the content type above means something"
+              - "ReactFlux systemd: {{ reactflux_service.status.ActiveState }}"
+              - "ReactFlux image: {{ reactflux_molecule_container.Config.Image }} behind {{ reactflux_index.server }}"
+              - "ReactFlux published: container {{ reactflux_container_http_port }} on host {{ reactflux_container_http_host_bind_port }}"
+              - "ReactFlux mounts: /molecule-additional-volume, read-only, as the role was asked"
+              - "ReactFlux bundle: {{ reactflux_molecule_bundle_paths | first }} as {{ reactflux_bundle.content_type }}"
+              - "ReactFlux build: commit {{ reactflux_molecule_build_hash }} of {{ reactflux_molecule_build_date }}"
+              - "ReactFlux missing paths: the application shell, so the content type above means something"
       rescue:
         # Whatever went wrong, the reason is almost always in the service log.
         - name: Retrieve the ReactFlux service log
