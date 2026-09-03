@@ -110,10 +110,8 @@
               - "bundle: {{ reactflux_molecule_bundle_paths | first }} as {{ reactflux_bundle.content_type }}"
               - "build: commit {{ reactflux_molecule_build_hash }}, matching the checkout at {{ reactflux_container_image_self_build_src_files_path }}"
               - "missing paths: the application shell, so the content type above means something"
-              - "REACTFLUX SELF-BUILD VERIFICATION COMPLETE"
       rescue:
-        # Whatever went wrong, the reason is usually in the service log, and
-        # nobody reading a failed CI run has a container left to look in.
+        # Whatever went wrong, the reason is almost always in the service log.
         - name: Retrieve the ReactFlux service log
           ansible.builtin.command:
             cmd: journalctl --no-pager -xeu reactflux.service
