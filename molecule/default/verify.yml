@@ -151,7 +151,7 @@
               Neither the certResolver label nor the Strict-Transport-Security header is rendered
               for the '{{ reactflux_container_labels_traefik_entrypoints }}' entrypoint
 
-        - name: Show ReactFlux verification summary
+        - name: Show the ReactFlux verification summary
           ansible.builtin.debug:
             msg:
               - "ReactFlux systemd: {{ reactflux_service.status.ActiveState }}"

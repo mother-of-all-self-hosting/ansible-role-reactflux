@@ -101,7 +101,7 @@
               With `reactflux_container_labels_traefik_enabled` off, templates/labels.j2 rendered
               no Traefik labels at all
 
-        - name: Show ReactFlux verification summary
+        - name: Show the ReactFlux verification summary
           ansible.builtin.debug:
             msg:
               - "ReactFlux systemd: {{ reactflux_service.status.ActiveState }}"
