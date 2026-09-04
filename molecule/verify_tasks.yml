@@ -35,14 +35,13 @@
 # content type discriminates.
 
 ---
-- name: Include the role's default variables under a separate name
+# The role is not included in this playbook, so its defaults are not in
+# scope. Reading defaults/main.yml directly ties the version assertion
+# below.
+- name: Load the role defaults
   ansible.builtin.include_vars:
-    # Only leaf values may be read out of this. Anything written in terms of
-    # another variable would be resolved in the surrounding scope, where the
-    # role's variables do not exist. Loading it under a name of its own also
-    # keeps it from outranking the values this scenario deliberately tuned.
     file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
-    name: reactflux_role_defaults
+    name: reactflux_defaults
 
 - name: Wait for the ReactFlux systemd service to become active
   ansible.builtin.systemd_service:

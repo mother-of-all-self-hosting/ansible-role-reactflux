@@ -38,10 +38,10 @@
           ansible.builtin.assert:
             that:
               - reactflux_molecule_container.Config.Image is search('electh/reactflux:')
-              - reactflux_molecule_container.Config.Image.endswith(':' ~ reactflux_role_defaults.reactflux_version)
+              - reactflux_molecule_container.Config.Image.endswith(':' ~ reactflux_defaults.reactflux_version)
             fail_msg: >-
               The container runs {{ reactflux_molecule_container.Config.Image }}, which is not
-              electh/reactflux at the '{{ reactflux_role_defaults.reactflux_version }}' tag
+              electh/reactflux at the '{{ reactflux_defaults.reactflux_version }}' tag
               `reactflux_version` names
             success_msg: >-
               The container runs {{ reactflux_molecule_container.Config.Image }}, the tag
@@ -123,7 +123,7 @@
               - reactflux_molecule_labels['traefik.http.routers.reactflux.tls'] == 'false'
               - reactflux_molecule_labels['traefik.http.services.reactflux.loadbalancer.server.port'] == reactflux_container_http_port | string
               - reactflux_molecule_labels['traefik.http.middlewares.reactflux-add-response-headers.headers.customresponseheaders.X-Content-Type-Options'] == 'nosniff'
-              - reactflux_molecule_labels['traefik.http.middlewares.reactflux-add-response-headers.headers.customresponseheaders.Content-Security-Policy'] == reactflux_role_defaults.reactflux_http_header_content_security_policy
+              - reactflux_molecule_labels['traefik.http.middlewares.reactflux-add-response-headers.headers.customresponseheaders.Content-Security-Policy'] == reactflux_defaults.reactflux_http_header_content_security_policy
             fail_msg: "The container's labels are {{ reactflux_molecule_labels }}"
             success_msg: >-
               The container carries the Traefik router, service and response-header labels
