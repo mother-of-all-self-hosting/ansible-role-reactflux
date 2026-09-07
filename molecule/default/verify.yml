@@ -37,14 +37,14 @@
         - name: Assert that the running container is the image defaults/main.yml resolves to
           ansible.builtin.assert:
             that:
-              - reactflux_molecule_container.Config.Image is search('electh/reactflux:')
-              - reactflux_molecule_container.Config.Image.endswith(':' ~ reactflux_defaults.reactflux_version)
+              - reactflux_container.Config.Image is search('electh/reactflux:')
+              - reactflux_container.Config.Image.endswith(':' ~ reactflux_defaults.reactflux_version)
             fail_msg: >-
-              The container runs {{ reactflux_molecule_container.Config.Image }}, which is not
+              The container runs {{ reactflux_container.Config.Image }}, which is not
               electh/reactflux at the '{{ reactflux_defaults.reactflux_version }}' tag
               `reactflux_version` names
             success_msg: >-
-              The container runs {{ reactflux_molecule_container.Config.Image }}, the tag
+              The container runs {{ reactflux_container.Config.Image }}, the tag
               `reactflux_version` names
 
         # A tripwire rather than a check of the role. The image's OCI labels come
@@ -55,7 +55,7 @@
         # images, this fails and says to go and use them.
         - name: Assert that the image's OCI version label is still the base image's
           vars:
-            reactflux_molecule_labels: "{{ reactflux_molecule_container.Config.Labels }}"
+            reactflux_molecule_labels: "{{ reactflux_container.Config.Labels }}"
           ansible.builtin.assert:
             that:
               - reactflux_molecule_labels['org.opencontainers.image.title'] == 'Caddy'
@@ -86,7 +86,7 @@
         - name: Assert that the additional volume the scenario asked for is mounted
           vars:
             reactflux_molecule_extra_mount: >-
-              {{ reactflux_molecule_container.Mounts | selectattr('Destination', 'equalto', '/molecule-additional-volume') | list }}
+              {{ reactflux_container.Mounts | selectattr('Destination', 'equalto', '/molecule-additional-volume') | list }}
           ansible.builtin.assert:
             that:
               - reactflux_molecule_extra_mount | length == 1
@@ -95,7 +95,7 @@
               - not (reactflux_molecule_extra_mount | first).RW
             fail_msg: >-
               /molecule-additional-volume is not mounted read-only from /etc/hostname. The
-              container's mounts are {{ reactflux_molecule_container.Mounts }}.
+              container's mounts are {{ reactflux_container.Mounts }}.
             success_msg: >-
               The extra volume `reactflux_container_additional_volumes_custom` names is mounted
               read-only at /molecule-additional-volume
@@ -113,7 +113,7 @@
         # `--label-file`, so what they say is a statement about the role.
         - name: Assert that the Traefik labels the role renders reached the container
           vars:
-            reactflux_molecule_labels: "{{ reactflux_molecule_container.Config.Labels }}"
+            reactflux_molecule_labels: "{{ reactflux_container.Config.Labels }}"
           ansible.builtin.assert:
             that:
               - reactflux_molecule_labels['traefik.enable'] == 'true'
@@ -136,7 +136,7 @@
         # and neither must the Strict-Transport-Security response header.
         - name: Assert that no TLS-only labels are rendered for a plain-HTTP entrypoint
           vars:
-            reactflux_molecule_labels: "{{ reactflux_molecule_container.Config.Labels }}"
+            reactflux_molecule_labels: "{{ reactflux_container.Config.Labels }}"
           ansible.builtin.assert:
             that:
               - "'traefik.http.routers.reactflux.tls.certResolver' not in reactflux_molecule_labels"
@@ -155,7 +155,7 @@
           ansible.builtin.debug:
             msg:
               - "ReactFlux systemd: {{ reactflux_service.status.ActiveState }}"
-              - "ReactFlux image: {{ reactflux_molecule_container.Config.Image }} behind {{ reactflux_index.server }}"
+              - "ReactFlux image: {{ reactflux_container.Config.Image }} behind {{ reactflux_index.server }}"
               - "ReactFlux published: container {{ reactflux_container_http_port }} on host {{ reactflux_container_http_host_bind_port }}"
               - "ReactFlux mounts: /molecule-additional-volume, read-only, as the role was asked"
               - "ReactFlux bundle: {{ reactflux_molecule_bundle_paths | first }} as {{ reactflux_bundle.content_type }}"

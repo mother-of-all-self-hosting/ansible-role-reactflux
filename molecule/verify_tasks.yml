@@ -77,14 +77,14 @@
 
 - name: Set facts about the ReactFlux container
   ansible.builtin.set_fact:
-    reactflux_molecule_container: "{{ reactflux_container_raw.stdout | from_json | first }}"
+    reactflux_container: "{{ reactflux_container_raw.stdout | from_json | first }}"
 
 - name: Assert that ReactFlux is running on the container network the role creates
   ansible.builtin.assert:
-    that: reactflux_molecule_container.NetworkSettings.Networks.keys() | list == ['reactflux']
+    that: reactflux_container.NetworkSettings.Networks.keys() | list == ['reactflux']
     fail_msg: >-
       The container is attached to
-      {{ reactflux_molecule_container.NetworkSettings.Networks.keys() | list }}, not to the single
+      {{ reactflux_container.NetworkSettings.Networks.keys() | list }}, not to the single
       `reactflux` network `reactflux_container_network` names
     success_msg: "The container is attached to the `reactflux` container network and to nothing else"
 
@@ -101,7 +101,7 @@
 - name: Assert that the container publishes the port the scenario asked for
   vars:
     reactflux_molecule_published: >-
-      {{ reactflux_molecule_container.NetworkSettings.Ports.get(reactflux_container_http_port | string ~ '/tcp') or [] }}
+      {{ reactflux_container.NetworkSettings.Ports.get(reactflux_container_http_port | string ~ '/tcp') or [] }}
   ansible.builtin.assert:
     that:
       - reactflux_molecule_published | length > 0
@@ -110,7 +110,7 @@
       Container port {{ reactflux_container_http_port }} is published as
       {{ reactflux_molecule_published }}, and not on host port
       {{ reactflux_container_http_host_bind_port }}.
-      The container publishes {{ reactflux_molecule_container.NetworkSettings.Ports }}.
+      The container publishes {{ reactflux_container.NetworkSettings.Ports }}.
     success_msg: >-
       Container port {{ reactflux_container_http_port }} is published on host port
       {{ reactflux_container_http_host_bind_port }}
@@ -122,7 +122,7 @@
 - name: Assert that no port other than ReactFlux's HTTP port is published
   vars:
     reactflux_molecule_bound_ports: >-
-      {{ reactflux_molecule_container.NetworkSettings.Ports | dict2items | selectattr('value') | map(attribute='key') | sort }}
+      {{ reactflux_container.NetworkSettings.Ports | dict2items | selectattr('value') | map(attribute='key') | sort }}
   ansible.builtin.assert:
     that: reactflux_molecule_bound_ports == [reactflux_container_http_port | string ~ '/tcp']
     fail_msg: >-
@@ -137,7 +137,7 @@
 # business; that the role's file arrived is the role's business.
 - name: Assert that the role's environment file reached the container
   vars:
-    reactflux_molecule_env: "{{ reactflux_molecule_container.Config.Env }}"
+    reactflux_molecule_env: "{{ reactflux_container.Config.Env }}"
   ansible.builtin.assert:
     that:
       - "'TZ=' ~ reactflux_environment_variables_tz in reactflux_molecule_env"
@@ -157,18 +157,18 @@
 # than making the assertion depend on which Docker the test host has.
 - name: Assert that the container runs as the role's user, with the role's capabilities
   vars:
-    reactflux_molecule_host_config: "{{ reactflux_molecule_container.HostConfig }}"
+    reactflux_molecule_host_config: "{{ reactflux_container.HostConfig }}"
   ansible.builtin.assert:
     that:
-      - reactflux_molecule_container.Config.User == reactflux_uid | string ~ ':' ~ reactflux_gid | string
+      - reactflux_container.Config.User == reactflux_uid | string ~ ':' ~ reactflux_gid | string
       - reactflux_molecule_host_config.CapDrop | map('regex_replace', '^CAP_', '') | list == ['ALL']
       - reactflux_molecule_host_config.CapAdd | map('regex_replace', '^CAP_', '') | list == ['NET_BIND_SERVICE']
     fail_msg: >-
-      The container runs as '{{ reactflux_molecule_container.Config.User }}' with
+      The container runs as '{{ reactflux_container.Config.User }}' with
       CapDrop={{ reactflux_molecule_host_config.CapDrop }} and
       CapAdd={{ reactflux_molecule_host_config.CapAdd }}
     success_msg: >-
-      The container runs as {{ reactflux_molecule_container.Config.User }} with every capability
+      The container runs as {{ reactflux_container.Config.User }} with every capability
       dropped except NET_BIND_SERVICE, as templates/systemd/reactflux.service.j2 asks
 
 ########################################################################
