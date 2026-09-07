@@ -69,15 +69,15 @@
 - name: Inspect the ReactFlux container
   ansible.builtin.command:
     cmd: docker inspect reactflux
-  register: reactflux_container_inspect
+  register: reactflux_container_raw
   changed_when: false
   retries: 12
   delay: 5
-  until: reactflux_container_inspect.rc == 0
+  until: reactflux_container_raw.rc == 0
 
 - name: Set facts about the ReactFlux container
   ansible.builtin.set_fact:
-    reactflux_molecule_container: "{{ reactflux_container_inspect.stdout | from_json | first }}"
+    reactflux_molecule_container: "{{ reactflux_container_raw.stdout | from_json | first }}"
 
 - name: Assert that ReactFlux is running on the container network the role creates
   ansible.builtin.assert:
