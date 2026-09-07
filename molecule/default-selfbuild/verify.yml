@@ -111,17 +111,17 @@
               - "ReactFlux build: commit {{ reactflux_molecule_build_hash }}, matching the checkout at {{ reactflux_container_image_self_build_src_files_path }}"
               - "ReactFlux missing paths: the application shell, so the content type above means something"
       rescue:
-        # Whatever went wrong, the reason is almost always in the service log.
-        - name: Retrieve the ReactFlux service log
+        # Whatever went wrong, the reason is almost always in the systemd service log.
+        - name: Retrieve the ReactFlux systemd service log
           ansible.builtin.command:
             cmd: journalctl --no-pager -xeu reactflux.service
           register: reactflux_service_log
           changed_when: false
 
-        - name: Show the ReactFlux service log
+        - name: Show the ReactFlux systemd service log
           ansible.builtin.debug:
             var: reactflux_service_log.stdout_lines
 
         - name: Fail because verification did not pass
           ansible.builtin.fail:
-            msg: "ReactFlux verification failed. The service log is printed above."
+            msg: "ReactFlux verification failed. The systemd service log is printed above."
