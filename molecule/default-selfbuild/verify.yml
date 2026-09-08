@@ -114,7 +114,7 @@
         # Whatever went wrong, the reason is almost always in the systemd service log.
         - name: Retrieve the ReactFlux systemd service log
           ansible.builtin.command:
-            cmd: journalctl --no-pager -xeu reactflux.service
+            cmd: journalctl --no-pager --output=cat --unit=reactflux.service
           register: reactflux_service_log
           changed_when: false
 
