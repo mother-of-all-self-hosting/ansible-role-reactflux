@@ -43,7 +43,7 @@
     file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
     name: reactflux_defaults
 
-- name: Wait for the ReactFlux systemd service to become active
+- name: Wait for the ReactFlux systemd service to become active (up to 180s)
   ansible.builtin.systemd_service:
     name: reactflux.service
   register: reactflux_service
