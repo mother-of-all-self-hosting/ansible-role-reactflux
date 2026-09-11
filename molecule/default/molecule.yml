@@ -31,6 +31,9 @@ provisioner:
   inventory:
     group_vars:
       all:
+        # Helper variables
+        reactflux_debug_service_enabled: false
+
         # Where the verification tasks reach ReactFlux. Ansible runs inside the
         # platform container, which is where the Docker daemon it installed
         # publishes container ports.

@@ -16,6 +16,11 @@
   hosts: all
   become: true
   gather_facts: false
+
+  vars:
+    reactflux_verify_units:
+      - reactflux.service
+
   tasks:
     - name: Verify that ReactFlux works
       block:
@@ -154,7 +159,7 @@
         - name: Show the ReactFlux verification summary
           ansible.builtin.debug:
             msg:
-              - "ReactFlux systemd: {{ reactflux_service.status.ActiveState }}"
+              - "ReactFlux systemd: {% for unit, state in reactflux_verify_units | zip(reactflux_services.results | map(attribute='status.ActiveState')) %}{{ unit }} ({{ state }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "ReactFlux image: {{ reactflux_container.Config.Image }} behind {{ reactflux_index.server }}"
               - "ReactFlux published: container {{ reactflux_container_http_port }} on host {{ reactflux_container_http_host_bind_port }}"
               - "ReactFlux mounts: /molecule-additional-volume, read-only, as the role was asked"
