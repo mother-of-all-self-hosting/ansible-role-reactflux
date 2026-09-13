@@ -155,6 +155,7 @@
               - "ReactFlux bundle: {{ reactflux_molecule_bundle_paths | first }} as {{ reactflux_bundle.content_type }}"
               - "ReactFlux build: commit {{ reactflux_molecule_build_hash }}, matching the checkout at {{ reactflux_container_image_self_build_src_files_path }}"
               - "ReactFlux missing paths: the application shell, so the content type above means something"
+
       rescue:
         # Whatever went wrong, the reason is almost always in the systemd service log.
         - name: Retrieve the ReactFlux systemd service log
