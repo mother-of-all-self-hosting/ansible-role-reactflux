@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Slavi Pantaleev
-# SPDX-FileCopyrightText: 2026 Suguru Hirahara
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -33,6 +33,7 @@ provisioner:
       all:
         # Helper variables
         reactflux_debug_service_enabled: false
+        reactflux_restarts_check_enabled: true
 
         # Where the verification tasks reach ReactFlux. Ansible runs inside the
         # platform container, which is where the Docker daemon it installed
