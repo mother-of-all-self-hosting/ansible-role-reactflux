@@ -249,11 +249,18 @@
 #
 # The substring is deliberate: Caddy says `text/javascript; charset=utf-8` here,
 # while nginx would say `application/javascript`.
+#
+# No byte count is asserted. ReactFlux code-splits, so the entry chunk the shell
+# loads is small (a few kilobytes) and pulls the rest of the application in as
+# lazy chunks; a size floor that held while the application was a single bundle
+# rejects a perfectly good build. What proves the served JavaScript is
+# ReactFlux's compiled application, rather than the fallback shell, is the build
+# stamp read out of the chunks below, not the size of any one of them.
 - name: Assert that the bundle is served as JavaScript
   ansible.builtin.assert:
     that:
       - "'javascript' in reactflux_bundle.content_type"
-      - reactflux_bundle.content | length > 100000
+      - reactflux_bundle.content | length > 0
     fail_msg: >-
       {{ reactflux_molecule_bundle_paths | first }} came back as
       '{{ reactflux_bundle.content_type }}', {{ reactflux_bundle.content | length }} bytes.
@@ -321,23 +328,52 @@
 # to read, so it is extracted, asserted to be present and well-formed, and
 # reported.
 #
+# ReactFlux code-splits, and the module that imports src/version-info.json is
+# bundled into a lazily loaded chunk rather than the entry chunk the shell
+# loads. Which chunk that is, and what it is called, is a build-time detail, so
+# the entry chunk is asked for the chunk names it references and each of them is
+# fetched and searched. A chunk that is not there is answered by the fallback
+# shell, which carries no stamp and does not stop the others from being read.
+#
 # The quoting around the two values is whatever the minifier felt like, so the
 # patterns match one character of it rather than a particular quote.
-- name: Read the build stamp compiled into the ReactFlux bundle
+- name: Read the JavaScript chunk names the ReactFlux entry chunk references
   ansible.builtin.set_fact:
-    reactflux_molecule_build_hash: "{{ (reactflux_bundle.content | regex_findall('gitHash:.([0-9a-f]{7,40}).') + ['']) | first }}"
-    reactflux_molecule_build_date: "{{ (reactflux_bundle.content | regex_findall('gitDate:.(20[0-9]{2}-[0-9]{2}-[0-9]{2}[ 0-9:+-]*)') + ['']) | first }}"
+    reactflux_molecule_chunk_paths: "{{ reactflux_bundle.content | regex_findall('assets/[A-Za-z0-9._-]+\\.js') | unique }}"
 
-- name: Assert that the bundle carries a build stamp
+- name: Fetch the JavaScript chunks the ReactFlux entry chunk references
+  ansible.builtin.uri:
+    url: "{{ reactflux_molecule_base_url }}/{{ item }}"
+    method: GET
+    status_code: [200]
+    follow_redirects: none
+    return_content: true
+  register: reactflux_molecule_chunk_results
+  loop: "{{ reactflux_molecule_chunk_paths }}"
+  changed_when: false
+
+- name: Read the build stamp compiled into the ReactFlux JavaScript
+  vars:
+    reactflux_molecule_javascript: >-
+      {{
+        ([reactflux_bundle.content]
+        + (reactflux_molecule_chunk_results.results | default([]) | map(attribute='content') | list))
+        | join('\n')
+      }}
+  ansible.builtin.set_fact:
+    reactflux_molecule_build_hash: "{{ (reactflux_molecule_javascript | regex_findall('gitHash:.([0-9a-f]{7,40}).') + ['']) | first }}"
+    reactflux_molecule_build_date: "{{ (reactflux_molecule_javascript | regex_findall('gitDate:.(20[0-9]{2}-[0-9]{2}-[0-9]{2}[ 0-9:+-]*)') + ['']) | first }}"
+
+- name: Assert that the served JavaScript carries a build stamp
   ansible.builtin.assert:
     that:
       - reactflux_molecule_build_hash | length >= 7
       - reactflux_molecule_build_date | length > 0
     fail_msg: >-
-      The bundle carries no `gitHash`/`gitDate` build stamp
+      The served JavaScript carries no `gitHash`/`gitDate` build stamp
       (hash '{{ reactflux_molecule_build_hash }}', date '{{ reactflux_molecule_build_date }}').
       ReactFlux's src/scripts/version-info.js is what writes it, and it is the only thing about
       this application that identifies which build it is.
     success_msg: >-
-      The bundle was built from commit {{ reactflux_molecule_build_hash }} of
+      The JavaScript was built from commit {{ reactflux_molecule_build_hash }} of
       {{ reactflux_molecule_build_date }}
