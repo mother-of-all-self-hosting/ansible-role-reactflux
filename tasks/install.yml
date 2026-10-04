@@ -60,6 +60,20 @@
         force: "yes"
       register: reactflux_git_pull_results
 
+    # ReactFlux stamps its build with the commit it was built from (shown in the UI and used for update checks).
+    # Its Dockerfile keeps `.git` out of the build context and expects the commit through build arguments instead.
+    - name: Determine the commit date of the ReactFlux checkout  # noqa: command-instead-of-module
+      ansible.builtin.command:
+        argv:
+          - git
+          - -C
+          - "{{ reactflux_container_image_self_build_src_files_path }}"
+          - log
+          - -1
+          - --format=%cI
+      register: reactflux_git_commit_date_result
+      changed_when: false
+
     - name: Ensure ReactFlux container image is built
       community.docker.docker_image_build:
         name: "{{ reactflux_container_image_self_build_name }}"
@@ -67,6 +81,9 @@
         path: "{{ reactflux_container_image_self_build_src_files_path }}"
         pull: true
         rebuild: "{{ 'always' if reactflux_git_pull_results.changed | bool else 'never' }}"
+        args:
+          SOURCE_COMMIT: "{{ reactflux_git_pull_results.after }}"
+          SOURCE_COMMIT_DATE: "{{ reactflux_git_commit_date_result.stdout }}"
       register: reactflux_container_image_build_result
 
 - name: Ensure ReactFlux container network is created via community.docker.docker_network
