@@ -22,9 +22,6 @@
   with_items:
     - reactflux_uid
     - reactflux_gid
-    - reactflux_hostname
-    - reactflux_path_prefix
-    - reactflux_container_network
 
 # The Caddyfile baked into the container image says `:2000` literally, so this
 # variable describes the image rather than configuring it. See the comment on it
